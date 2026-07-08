@@ -1,0 +1,1388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>broken_urdu</title>
+<meta name="description" content="broken_urdu — stories in two scripts, one voice.">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+  /* ============================================
+     ANIMATABLE CUSTOM PROPERTIES
+     registering these lets the browser smoothly
+     tween accent colors whenever JS updates them
+     on chapter change (no @property = instant jump)
+     ============================================ */
+  @property --accent{ syntax:'<color>'; inherits:true; initial-value:#D8AC53; }
+  @property --accent-2{ syntax:'<color>'; inherits:true; initial-value:#F2D48A; }
+
+  /* ============================================
+     TOKENS
+     ============================================ */
+  :root{
+    --ink:      #0F0B0A;
+    --ink-2:    #1C1411;
+    --panel:    rgba(24, 18, 15, 0.55);
+    --panel-solid: rgba(21, 16, 13, 0.86);
+    --panel-border: rgba(214, 169, 75, 0.14);
+    --bone:     #F2E9D8;
+    --bone-dim: #C4B79E;
+    --ember:    #C1554B;
+    --ember-dim:#7A322E;
+    --ember-glow: #E8763A;
+    --gold:     #D8AC53;
+    --line:     #3B2E27;
+
+    --accent:   #D8AC53;
+    --accent-2: #F2D48A;
+
+    --f-urdu:  'Noto Nastaliq Urdu', serif;
+    --f-body:  'Lora', Georgia, serif;
+    --f-mono:  'JetBrains Mono', monospace;
+  }
+
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--ink);
+    color:var(--bone);
+    font-family:var(--f-body);
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+    position:relative;
+    overflow-x:hidden;
+  }
+  body.loading{overflow:hidden;}
+  a{color:inherit;}
+  ::selection{background:var(--ember-dim); color:var(--bone);}
+
+  /* ============================================
+     ATMOSPHERE — two crossfading gradient layers,
+     a canvas particle field, an aurora overlay
+     (part 7 only), grain and vignette.
+     Opacity is the only thing ever transitioned
+     here, so the crossfade is butter-smooth in
+     every browser regardless of gradient support.
+     ============================================ */
+  .atmosphere{position:fixed; inset:0; z-index:-5; pointer-events:none; overflow:hidden;}
+  .atmo-layer{
+    position:absolute; inset:-2% -2%;
+    transition:opacity 1.8s ease;
+    opacity:0;
+  }
+  .atmo-layer.is-active{opacity:1;}
+
+  .aurora-layer{
+    position:fixed; inset:-15% -15%; z-index:-4;
+    pointer-events:none;
+    opacity:0;
+    mix-blend-mode:screen;
+    filter:blur(46px);
+    background:
+      repeating-linear-gradient(102deg,
+        rgba(201,182,255,0.28) 0%,
+        rgba(241,232,255,0.14) 7%,
+        rgba(130,210,225,0.16) 14%,
+        transparent 24%);
+    animation:auroraDrift 22s ease-in-out infinite alternate;
+    animation-play-state:paused;
+    transition:opacity 1.8s ease;
+  }
+  body[data-theme="7"] .aurora-layer{opacity:0.55; animation-play-state:running;}
+  @keyframes auroraDrift{
+    0%{ transform:translate(-4%, 0) rotate(0deg); }
+    100%{ transform:translate(4%, -3%) rotate(1.2deg); }
+  }
+
+  #particles{position:fixed; inset:0; z-index:-3; pointer-events:none;}
+
+  .grain{
+    position:fixed; inset:0; z-index:-2;
+    pointer-events:none;
+    opacity:0.5;
+    mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.35'/></svg>");
+  }
+  .vignette{
+    position:fixed; inset:0; z-index:-1;
+    pointer-events:none;
+    background:radial-gradient(ellipse 90% 80% at 50% 45%, transparent 55%, rgba(0,0,0,0.45) 100%);
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.01ms !important; animation-iteration-count:1 !important; transition-duration:0.01ms !important;}
+    #particles{display:none;}
+  }
+
+  :focus-visible{outline:2px solid var(--accent); outline-offset:3px;}
+
+  /* ============================================
+     LOADER
+     ============================================ */
+  .loader{
+    position:fixed; inset:0; z-index:999;
+    display:flex; align-items:center; justify-content:center;
+    background:#0F0B0A;
+    transition:opacity .8s ease, visibility .8s ease;
+  }
+  .loader.hidden{opacity:0; visibility:hidden; pointer-events:none;}
+  .loader-title{
+    font-family:var(--f-mono);
+    font-weight:500;
+    font-size:clamp(24px, 6vw, 42px);
+    color:var(--bone);
+    letter-spacing:-0.01em;
+  }
+  .loader-title span{
+    display:inline-block;
+    opacity:0;
+    transform:translateY(10px);
+    animation:loaderMend 700ms ease forwards;
+    animation-delay:calc(var(--i) * 35ms);
+  }
+  .loader-title .brk{
+    background:linear-gradient(120deg, var(--ember-glow), var(--ember) 60%, var(--gold));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  @keyframes loaderMend{ to{ opacity:1; transform:translateY(0); } }
+
+  /* ============================================
+     READING PROGRESS + CHAPTER PILL
+     ============================================ */
+  .progress-track{
+    position:fixed; top:0; left:0; right:0; height:3px;
+    background:rgba(255,255,255,0.06);
+    z-index:60;
+  }
+  .progress-fill{
+    height:100%; width:0%;
+    background:linear-gradient(90deg, var(--accent), var(--accent-2));
+    transition:width .1s linear, background 1.8s ease;
+  }
+  .chapter-pill{
+    position:fixed; left:16px; bottom:16px; z-index:60;
+    display:flex; align-items:flex-start; gap:10px;
+    padding:9px 16px;
+    border:1px solid var(--panel-border);
+    background:var(--panel);
+    backdrop-filter:blur(10px);
+    -webkit-backdrop-filter:blur(10px);
+    border-radius:16px;
+    font-family:var(--f-mono);
+    font-size:11px;
+    letter-spacing:0.04em;
+    color:var(--bone-dim);
+    max-width:calc(100vw - 32px);
+    opacity:0;
+    transform:translateY(8px);
+    transition:opacity .5s ease, transform .5s ease, border-color 1.8s ease;
+    pointer-events:none;
+  }
+  .chapter-pill.visible{opacity:1; transform:translateY(0);}
+  .chapter-pill .num{color:var(--accent); font-weight:600; white-space:nowrap; transition:color 1.8s ease;}
+  .chapter-pill .mood{color:var(--bone); white-space:normal; line-height:1.3;}
+  @media (max-width:520px){
+    .chapter-pill{max-width:calc(100vw - 24px);}
+    .chapter-pill .mood{font-size:10.5px;}
+  }
+
+  /* ============================================
+     LAYOUT SHELL
+     ============================================ */
+  .wrap{
+    max-width:700px;
+    margin:0 auto;
+    padding:0 24px;
+    position:relative;
+  }
+
+  header.site{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:20px 24px;
+    margin-top:16px;
+    border:1px solid var(--panel-border);
+    background:var(--panel);
+    backdrop-filter:blur(10px);
+    -webkit-backdrop-filter:blur(10px);
+    border-radius:3px;
+    font-family:var(--f-mono);
+    font-size:13px;
+    letter-spacing:0.02em;
+    color:var(--bone-dim);
+    box-shadow:inset 0 -1px 0 rgba(216,172,83,0.16);
+    transition:box-shadow 1.8s ease;
+    scroll-snap-align:none;
+  }
+  header.site nav a{
+    position:relative;
+    text-decoration:none;
+    margin-left:20px;
+    color:var(--bone-dim);
+    transition:color .3s ease;
+  }
+  header.site nav a::after{
+    content:"";
+    position:absolute; left:0; right:100%; bottom:-3px; height:1px;
+    background:var(--accent);
+    transition:right .3s ease, background 1.8s ease;
+  }
+  header.site nav a:hover{color:var(--bone);}
+  header.site nav a:hover::after{right:0;}
+  header.site .mark{color:var(--bone); font-weight:500;}
+
+  /* ============================================
+     HERO — the fractured wordmark (signature element)
+     ============================================ */
+  .hero{
+    padding:80px 0 64px;
+    text-align:center;
+    position:relative;
+    scroll-snap-align:start;
+  }
+
+  .fracture-title{
+    font-family:var(--f-mono);
+    font-weight:500;
+    font-size:clamp(34px, 7vw, 58px);
+    letter-spacing:-0.01em;
+    margin:0 0 18px;
+    white-space:nowrap;
+    color:var(--bone);
+  }
+  .fracture-title span{
+    display:inline-block;
+    opacity:0;
+    transform:translate(var(--dx,0), var(--dy,0)) rotate(var(--dr,0deg));
+    animation:mend 900ms cubic-bezier(.2,.8,.2,1) forwards;
+    animation-delay:calc(var(--i) * 28ms);
+  }
+  .fracture-title .brk{
+    background:linear-gradient(120deg, var(--ember-glow), var(--ember) 60%, var(--gold));
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+  }
+  @keyframes mend{
+    to{ opacity:1; transform:translate(0,0) rotate(0deg); }
+  }
+
+  .hero .tagline{
+    font-family:var(--f-urdu);
+    direction:rtl;
+    font-size:26px;
+    color:var(--bone-dim);
+    margin:0 0 10px;
+    opacity:0;
+    animation:fadeUp 700ms ease forwards;
+    animation-delay:1.05s;
+  }
+  .hero .tagline-en{
+    font-family:var(--f-mono);
+    font-size:12px;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    color:var(--bone-dim);
+    opacity:0;
+    animation:fadeUp 700ms ease forwards;
+    animation-delay:1.2s;
+  }
+  @keyframes fadeUp{
+    from{opacity:0; transform:translateY(6px);}
+    to{opacity:1; transform:translateY(0);}
+  }
+
+  .hero .insta{
+    position:relative;
+    overflow:hidden;
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    margin-top:28px;
+    padding:9px 18px;
+    border:1px solid var(--line);
+    border-radius:2px;
+    font-family:var(--f-mono);
+    font-size:13px;
+    text-decoration:none;
+    color:var(--bone);
+    opacity:0;
+    animation:fadeUp 700ms ease forwards;
+    animation-delay:1.35s;
+    transition:border-color .2s ease, color .2s ease;
+  }
+  .hero .insta:hover{border-color:var(--ember-glow); color:var(--ember-glow);}
+
+  .ripple{
+    position:absolute;
+    border-radius:50%;
+    background:rgba(232,118,58,0.45);
+    transform:scale(0);
+    opacity:.6;
+    animation:rippleAnim .6s ease-out forwards;
+    pointer-events:none;
+  }
+  @keyframes rippleAnim{ to{ transform:scale(5); opacity:0; } }
+
+  /* ============================================
+     ABOUT
+     ============================================ */
+  .about{
+    padding:32px 28px;
+    margin-bottom:8px;
+    border:1px solid var(--panel-border);
+    background:var(--panel-solid);
+    border-radius:3px;
+    color:var(--bone-dim);
+    font-size:15px;
+    scroll-snap-align:start;
+  }
+  .about p{margin:0 0 12px;}
+  .about strong{color:var(--bone); font-weight:600;}
+
+  /* ============================================
+     FEED
+     ============================================ */
+  .feed-heading{
+    font-family:var(--f-mono);
+    font-size:12px;
+    letter-spacing:0.12em;
+    text-transform:uppercase;
+    color:var(--bone-dim);
+    margin:56px 0 24px;
+  }
+
+  /* ============================================
+     STORIES
+     ============================================ */
+  .story{
+    position:relative;
+    padding:36px 28px 36px 28px;
+    margin-bottom:20px;
+    border:1px solid var(--panel-border);
+    background:var(--panel-solid);
+    border-radius:5px;
+    transition:border-color .4s ease, transform .4s ease, box-shadow .4s ease;
+    isolation:isolate;
+    content-visibility:auto;
+    contain-intrinsic-size:auto 1400px;
+    contain:layout style paint;
+  }
+  .story:hover{
+    border-color:var(--accent);
+    transform:translateY(-2px);
+    box-shadow:0 18px 40px -20px rgba(0,0,0,0.55);
+  }
+  .story::before{
+    content:"";
+    position:absolute; inset:0;
+    border-radius:inherit;
+    background:radial-gradient(320px circle at var(--mx,50%) var(--my,50%), rgba(216,172,83,0.14), transparent 70%);
+    opacity:0;
+    transition:opacity .4s ease;
+    pointer-events:none;
+    z-index:0;
+  }
+  .story:hover::before{opacity:1;}
+  .story > *{position:relative; z-index:1;}
+
+  .story-meta{
+    display:flex;
+    justify-content:flex-start;
+    align-items:baseline;
+    gap:14px;
+    font-family:var(--f-mono);
+    font-size:12px;
+    color:var(--bone-dim);
+    margin-bottom:16px;
+  }
+  .story-meta .part{
+    color:var(--accent);
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    transition:color 1.8s ease;
+  }
+  .story-meta .read-time::before{
+    content:"·";
+    margin-right:14px;
+    color:var(--line);
+  }
+  .story-title{
+    font-family:var(--f-urdu);
+    direction:rtl;
+    font-size:24px;
+    color:var(--bone);
+    margin:0 0 4px;
+  }
+  .story-title .en{
+    display:block;
+    direction:ltr;
+    text-align:left;
+    font-family:var(--f-mono);
+    font-size:11px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--bone-dim);
+    margin-top:6px;
+    margin-bottom:20px;
+  }
+  .story-title.roman{
+    direction:ltr;
+    text-align:left;
+    font-family:var(--f-body);
+    font-style:italic;
+    font-size:26px;
+  }
+  .story-title.roman .en{
+    text-align:left;
+    margin-top:8px;
+    font-family:var(--f-body);
+    font-style:normal;
+    text-transform:none;
+    letter-spacing:0;
+    font-size:14px;
+    color:var(--accent);
+    transition:color 1.8s ease;
+  }
+  .story-title span.word{
+    display:inline-block;
+    opacity:0;
+    filter:blur(6px);
+    transform:translateY(10px);
+    animation:wordReveal 650ms ease forwards;
+    animation-delay:calc(var(--wi,0) * 55ms);
+  }
+  @keyframes wordReveal{
+    to{ opacity:1; filter:blur(0); transform:translateY(0); }
+  }
+
+  .story-body{
+    font-family:var(--f-body);
+    font-size:16px;
+    line-height:1.9;
+    color:var(--bone);
+  }
+  .story-body p{
+    margin:0 0 16px;
+    opacity:0;
+    filter:blur(6px);
+    transform:translateY(16px);
+    transition:opacity .7s ease, filter .7s ease, transform .7s ease;
+  }
+  .story-body p.seen{opacity:1; filter:blur(0); transform:translateY(0);}
+  .story-body p:last-child{margin-bottom:0;}
+  .story-continues{
+    margin-top:20px;
+    font-family:var(--f-mono);
+    font-size:12px;
+    color:var(--bone-dim);
+    border-top:1px solid var(--line);
+    padding-top:14px;
+  }
+
+  /* ============================================
+     FOOTER
+     ============================================ */
+  footer{
+    padding:48px 0 64px;
+    text-align:center;
+    font-family:var(--f-mono);
+    font-size:12px;
+    color:var(--bone-dim);
+  }
+  footer a{
+    text-decoration:underline;
+    text-underline-offset:3px;
+    transition:color .3s ease;
+  }
+  footer a:hover{color:var(--accent);}
+
+  /* ============================================
+     RESPONSIVE
+     ============================================ */
+  @media (max-width:520px){
+    .fracture-title{font-size:9vw;}
+    .story-body{font-size:15px;}
+    .chapter-pill{font-size:10px; padding:7px 11px;}
+  }
+</style>
+</head>
+<body class="loading">
+
+<div class="loader" id="loader" aria-hidden="true">
+  <h1 class="loader-title" id="loaderTitle"></h1>
+</div>
+
+<div class="atmosphere" aria-hidden="true">
+  <div class="atmo-layer" id="atmoA"></div>
+  <div class="atmo-layer" id="atmoB"></div>
+</div>
+<div class="aurora-layer" aria-hidden="true"></div>
+<canvas id="particles" aria-hidden="true"></canvas>
+<div class="grain" aria-hidden="true"></div>
+<div class="vignette" aria-hidden="true"></div>
+
+<div class="progress-track" aria-hidden="true"><div class="progress-fill" id="progressFill"></div></div>
+<div class="chapter-pill" id="chapterPill" aria-hidden="true">
+  <span class="num" id="chapterNum">Raakh</span>
+  <span class="mood" id="chapterMood">Part 1</span>
+</div>
+
+<div class="wrap">
+
+  <header class="site">
+    <span class="mark">broken_urdu</span>
+    <nav>
+      <a href="#stories">stories</a>
+      <a href="#about">about</a>
+      <a href="https://instagram.com/broken_urdu" target="_blank" rel="noopener">instagram</a>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <h1 class="fracture-title" id="fractureTitle" aria-label="broken_urdu"></h1>
+    <p class="tagline">دو زبانیں، ایک آواز</p>
+    <p class="tagline-en">two scripts. one voice.</p>
+    <a class="insta" id="heroInsta" href="https://instagram.com/broken_urdu" target="_blank" rel="noopener">
+      @broken_urdu on instagram ↗
+    </a>
+  </section>
+
+  <section class="about" id="about">
+    <p><strong>broken_urdu</strong> is a small archive of stories.</p>
+    <p>New fragments are posted as they're written, longer stories in parts — no algorithm, no feed, just words kept in order.</p>
+  </section>
+
+  <p class="feed-heading" id="stories">Stories</p>
+
+  <div id="storyFeed"></div>
+
+  <footer>
+    <p>broken_urdu — updated by hand, not by app.<br>
+    follow on <a href="https://instagram.com/broken_urdu" target="_blank" rel="noopener">instagram</a></p>
+  </footer>
+
+</div>
+
+<script>
+/* ==================================================================
+   PUBLISHING NEW STORIES
+   ------------------------------------------------------------------
+   Add a new object to the BOTTOM of the STORIES array below, then
+   re-save and re-upload the file.
+
+   Fields:
+     date        — e.g. "2026-07-08" (kept for your own reference,
+                   not shown on the page)
+     part        — e.g. "Part 9" (shown as a label)
+     titleUrdu   — story title in Urdu script
+     titleEn     — english translation of the title (optional)
+     body        — array of strings, one per paragraph
+     continues   — optional note, e.g. "continued in Part 10" (leave
+                   out or set to "" if the story is complete)
+     roman       — set to true if the story is written in Roman Urdu
+                   (Latin script) rather than Urdu script, so it
+                   renders left-to-right instead of right-to-left
+
+   Each chapter automatically gets its own atmosphere (background,
+   particles, accent color) from the THEMES array further down. With
+   8 stories and 8 themes, a 9th part will simply reuse Theme 1's
+   mood. If you want a unique mood for a new chapter instead, add a
+   9th object to THEMES following the same shape as the others.
+   ================================================================== */
+
+  const STORIES = [
+    {
+      date: "2026-07-01",
+      part: "Part 1",
+      titleUrdu: "Raakh",
+      titleEn: "Jis Shehar Mein Mohabbat Rehti Thi",
+      roman: true,
+      body: [
+        "Lahore ka December hamesha thanda hota tha.",
+        "Subah ki dhuandhli galiyan, chai ki dukaanein, aur purane darakhton se girte hue peele patte.",
+        "Isi shehar ke ek purane mohalle mein rehti thi Areeba.",
+        "24 saal ki. Urdu literature ki student. Kitaabon mein jeene wali larki.",
+        "Uske walid school teacher the aur walida silai karti thi.",
+        "Areeba ki duniya bohat chhoti thi. Ghar. University. Aur uski diary.",
+        "Diary jismein woh har raat apne sapne likhti thi.",
+        "Dusri taraf tha Saad. 26 saal ka. Architecture ka student.",
+        "Din bhar naqshay banata aur raat ko freelancing karke apne ghar ka kharcha uthata.",
+        "Uski maa beemar rehti thi. Baap bachpan mein hi guzar gaye the.",
+        "Saad ki zindagi ne use waqt se pehle bada kar diya tha.",
+        "Dono ki mulaqat university library mein hui.",
+        "Pehle sirf salam. Phir baatein. Phir aadat.",
+        "Aur phir woh mohabbat jo dheere dheere insaan ki rooh mein utar jaati hai.",
+        "Teen saal tak unhone saath safar kiya.",
+        "Kabhi Liberty Market ki bheed mein. Kabhi Anarkali ki purani galiyon mein.",
+        "Kabhi university ke us bench par jahan unke naam aaj bhi khurche hue the.",
+        "Saad aksar kehta tha: \"Ek din apna ghar design karunga... aur us ghar ki har khirki tumhari pasand ki hogi.\"",
+        "Areeba hans deti. \"Aur agar main na rahi to?\"",
+        "Saad foran jawab deta. \"To ghar bhi nahi hoga.\"",
+        "Us waqt dono hans padte. Kyunke unhe lagta tha ke bura waqt sirf kahaniyon mein aata hai.",
+        "Magar asal zindagi kahaniyon se zyada zalim hoti hai.",
+        "University khatam hui. Saad ko Dubai mein job mil gayi.",
+        "Dono ne faisla kiya ke do saal mehnat karenge. Phir shaadi. Phir apna ghar. Phir apni zindagi.",
+        "Airport par rukhsat hote waqt Areeba ne uske haath mein apni diary ka ek safha diya.",
+        "Us par likha tha: \"Main tumhara intezar karungi. Chahe do saal lag jaayein ya poori zindagi.\"",
+        "Saad chala gaya. Aur intezar shuru ho gaya.",
+        "Pehla saal guzar gaya. Phir doosra. Video calls. Messages. Sapne. Sab chal raha tha.",
+        "Phir ek raat Areeba ko chakkar aaya. Usne socha thakan hogi. Magar reports kuch aur keh rahi thi."
+      ],
+      continues: "continued in Part 2"
+    },
+    {
+      date: "2026-07-02",
+      part: "Part 2",
+      titleUrdu: "Raakh",
+      titleEn: "Dhokebaazi ya Mohabbat",
+      roman: true,
+      body: [
+        "Blood cancer. Third stage. Doctor ki awaaz ab bhi uske kaanon mein goonj rahi thi.",
+        "\"Treatment mushkil hai...\"",
+        "Us raat Areeba ne poori raat ro kar guzaari. Magar Saad ko kuch nahi bataya. Ek baar bhi nahi.",
+        "Kyunke usse pata tha... Saad sab kuch chhor kar wapas aa jayega. Aur woh uska mustaqbil barbaad nahi karna chahti thi.",
+        "Usne dheere dheere messages kam kar diye. Calls avoid karne lagi.",
+        "Aur phir ek din... usne Saad ko message bheja:",
+        "\"Mujhe lagta hai hum dono ko alag ho jana chahiye.\"",
+        "Bas itna. Koi wajah nahi. Koi explanation nahi. Kuch bhi nahi.",
+        "Saad ki duniya us ek message ke baad ruk gayi. Usne call ki. Darjanon baar. Hundreds of messages. Lekin Areeba ne jawab nahi diya.",
+        "Aur us raat pehli baar dono alag alag shehron mein rote hue soye.",
+        "Ek mohabbat bachane ke liye. Aur ek mohabbat samajh na paane ki wajah se."
+      ],
+      continues: "continued in Part 3"
+    },
+    {
+      date: "2026-07-03",
+      part: "Part 3",
+      titleUrdu: "Raakh",
+      titleEn: "Ghar wapsi",
+      roman: true,
+      body: [
+        "Teen saal baad. Saad Lahore wapas aaya. Uske paas paisa tha. Kamiyabi thi.",
+        "Magar woh larki nahi thi jiske liye yeh sab kiya tha.",
+        "Usne bohat koshish ki Areeba ko bhoolne ki. Magar kuch log yaad nahi aate... woh saans ki tarah saath rehte hain.",
+        "Ek din woh purani university gaya. Wahi library. Wahi bench. Wahi yaadein.",
+        "Wahan uski mulaqat Areeba ki dost Maham se hui. Maham ne use dekha, aur uski aankhon mein aansu aa gaye.",
+        "\"Tumhe kuch pata nahi na?\"",
+        "Saad ghabra kar puchne laga ke kya huva....?",
+        "\"Muje Areeba se milna hai ek aakhri baar..\"",
+        "Usne Maham se yeh ilteja ki...",
+        "Maham ne jawab mein kahaa ke..."
+      ],
+      continues: "continued in Part 4"
+    },
+    {
+      date: "2026-07-04",
+      part: "Part 4",
+      titleUrdu: "Raakh",
+      titleEn: "Kitabo Mein Qaid Jazbaat",
+      roman: true,
+      body: [
+        "\"Saad, tum jo chah rahe ho woh ab mumkin nahi..\" Maham ne halki awaaz mein kahaa.",
+        "Maham kuch der khamosh rahi.. phir phoot phoot kar rone lagi..",
+        "Maham ko pata chal gaya tha ke Saad Lahore laut chuka hain, aur yeh andaza tha ke woh Areeba ke ghar na jaakar uske dosto se rabta karne university aayega..",
+        "Isliye woh apne saath Areeba ki di huvi diary laayi thi, jo Areeba ne Saad ke liye likhi thi..",
+        "Uske aansu kuch thame... aur phir usne apne bag se woh diary nikal kar Saad se kahaa.",
+        "\"Areeba ki diary...\"",
+        "Saad ke haath kaanp gaye.",
+        "Diary ke pehle safhe par likha tha:",
+        "\"Saad, agar yeh diary tum tak pohanch jaaye to samajh jaana ke main haar gayi.\"",
+        "Pehla safha padhkar Saad ne diary band kar di aur wahan se apne ghar chala aaya.. Maham ne use rokne ki koshish ki, magar woh ruka nahi..",
+        "Use lag raha tha ke Areeba ki shaadi kisi aur se ho gayi hain..",
+        "Usne socha ke ek baar padh leta hun ke kya hain diary mein jo Maham ne itna sambhal kar rakha ek saal se..",
+        "Saad ne diary ka doosra safha khola, date thi uske Dubai pohochne ke doosre din ki.. uspar likha tha...",
+        "\"Saad!!! Mai tumse marte dam tak mohabbat karungi\"",
+        "Saad hasne laga...",
+        "Magar use yeh andaza nahi tha ke kuch safhe padhne ke baad uske pairon tale zameen na rahegi, na sar ke upar aasmaan..."
+      ],
+      continues: "continued in Part 5"
+    },
+    {
+      date: "2026-07-05",
+      part: "Part 5",
+      titleUrdu: "Raakh",
+      titleEn: "Raakh",
+      roman: true,
+      body: [
+        "Jaise jaise woh pages paltata gaya, waise waise uski hasi aur muskurahat.. udasi aur gham mein tabdil hoti gayi..",
+        "Har safha dard se bhara hua tha. Har safha. Har lafz. Har aansu.",
+        "Aur phir usne woh entry padhi jo Areeba ne breakup wale din likhi thi.",
+        "\"Aaj maine usse khud se door kar diya.\" \"Woh mujhe nafrat karega.\" \"Shayad bewafa samjhega.\" \"Magar uski aankhon ke saamne marne se yeh dard kam hai.\"",
+        "Saad toot gaya. Poori tarah.",
+        "Usne diary ka aakhri safha khola. Likha tha:",
+        "\"Aaj meri chemotherapy ka aakhri din hai.\" \"Doctor kehte hain mere paas zyada waqt nahi.\" \"Mujhe maut se dar nahi lagta.\" \"Mujhe bas is baat ka afsos hai ke Saad sochta rahega ke maine usse chhor diya.\" \"Aur sach kabhi nahi jaan payega.\"",
+        "Diary yahin khatam ho gayi.",
+        "Saad ki saansein bhaari ho gayin. Aankhon ke saamne sab dhundla gaya.",
+        "Usne Maham ko call kiya. Roti hui awaaz aayi:",
+        "\"Areeba do saal pehle guzar gayi thi.\"",
+        "Us raat Lahore mein baarish ho rahi thi. Aur Saad us qabar ke paas baitha tha jahan Areeba so rahi thi.",
+        "Usne diary qabar par rakhi. Aur pehli baar itna roya ke uski awaaz bhi toot gayi.",
+        "Subah hone lagi. Azaan ki awaaz door se aa rahi thi.",
+        "Saad ne qabar par haath rakha aur dheere se kaha: \"Tumne mujhe bachane ke liye khud ko mita diya... aur main poori zindagi tumhe bewafa samajhta raha.\"",
+        "Hawa ka ek jhonka aaya. Qabar par rakhe sukhe patte udd gaye.",
+        "Aur Saad ko ehsaas hua... kuch mohabbatein judaa nahi hotin. Bas ek qabar ke is paar aur doosri qabar ke us paar chali jaati hain. Aur phir insaan poori zindagi unki raakh se apna dil garam rakhta hai.",
+        "Lagbhag do mahina guzar chuka tha Saad ko Lahore laute.",
+        "Saad ne khud ko sambhal liya tha... magar phir bhi us ek shaks ki gair-maujoodgi use kha rahi thi andar hi andar..",
+        "Woh apne room ki tanhayi mein rehta, online meeting attend karta jab uska man hota, ya phir woh bhi miss kar deta...",
+        "August ki 21 tareekh thi..",
+        "Us raat Saad bohot ghamgeen tha, use apne aap ka hosh nahi tha aur woh khud par control kho chuka tha..",
+        "Usne ek dibbi uthayi aur usme se kuch khane ke liye nikal liya... woh dibbi ke cover par likha tha \"Poison\"..."
+      ],
+      continues: "continued in Part 6"
+    },
+    {
+      date: "2026-07-06",
+      part: "Part 6",
+      titleUrdu: "Raakh",
+      titleEn: "Zindagi Aur Maut",
+      roman: true,
+      body: [
+        "Saad ne ek tukda uthaya aur apne muh ki taraf badhane laga..",
+        "Itne mein darwaze se awaaz aayi..",
+        "\"SAAD!! Yeh kya kha rahe ho tum???\"",
+        "Saad ne jaise hi awaaz suni woh poori tarah hosh mein aa gaya... use yeh hosh bhi nahi tha ke woh poison khane wala tha..",
+        "Woh poison jo chuhon ko maarne ke liye istemal hota hain...",
+        "Magar woh awaaz... Saad khud se sawaal karne laga ke yeh kaise mumkin hain..",
+        "Us awaaz ne Saad ko teen saal maazi mein dhakel diya...",
+        "Saad ne us awaaz ki taraf apne kadam badhaye, woh door ke us taraf se aayi thi...",
+        "Woh shaks abhi bhi wahin khada tha darwaze ke saamne, room ke us kone mein roshni kam hone ki wajah se Saad use dekh nahi pa raha tha... magar us shaks ko Saad mukammal taur par nazar aa raha tha.",
+        "Jaise jaise kadam aage badhe, Saad ki dhadkanein raftaar se bhi tez ho gayi thin..",
+        "Woh muh mein badbada raha tha — nahi... yeh nahi ho sakta... yeh mumkin nahi...",
+        "Saad ab us shaks ke kareeb tha... us shaks ke badan ki khushboo ne use aur zyada pareshan kar diya..",
+        "Ab woh dono andhere mein khade the.. ab koi kisi ko nazar nahi aa raha tha..",
+        "Saad ne right side mein switch board ki taraf dekha aur light ka switch on kar diya..",
+        "Lights on hote hi Saad ka jism aur rooh kaanp gayi.. ek aurat naqaab lagaye huve thi, aur woh uski aankhon ko achi tarah jaanta tha..",
+        "Saad ne toh use tabhi pehchaan liya tha.. jab us aurat ne andhere mein Saad ko awaaz lagayi thi..",
+        "Kaun hain yeh aurat jisne Saad ko teen saal maazi mein le gaya...",
+        "(Kya yeh Areeba hain?? Magar yeh toh mumkin hi nahi...)",
+        "Saad ne poocha, \"Kaun ho tum...\"",
+        "Usne jawaab nahi diya.. aur woh wahan se jaane lagi... bina kuch bole, bina apni asl shinaakht karwaaye..",
+        "Saad ne uske bazuo ko pakad liya aur use naqaab hataane ko kaha...",
+        "Us aurat ne resist kiya magar haar gayi.. usne apna naqaab hataya...",
+        "Aur Saad ka shak, haqeeqat mein tabdeel ho gaya...",
+        "Phir usne badbadaya ke yeh mumkin nahi..."
+      ],
+      continues: "continued in Part 7"
+    },
+    {
+      date: "2026-07-07",
+      part: "Part 7",
+      titleUrdu: "Raakh",
+      titleEn: "Moajzaa",
+      roman: true,
+      body: [
+        "Saad ne chaukne wale andaaz mein usse sawaal kiya, \"Kaun ho tum???\"",
+        "Kuch der woh khamosh rahi.. phir usne kahaa, \"Mai Areeba hun!!\"",
+        "Saad ko ek jhatka sa laga aur woh apne aap ko sambhal nahi paaya, aur ghutno ke bal zameen par gir pada.",
+        "Uski aankhon mein aansu the... mathe par shikan thi.. woh apne aapko mazloom samajh raha tha.. mazloom apni mohabbat ka..",
+        "Yaqeenan woh Areeba hi thi — woh Areeba jo Maham aur us diary ke mutabiq do saal pehle mar chuki thi.",
+        "Kya yeh ek moajza tha, ya phir ek khwaab jo Saad dekh raha tha, Saad ko kuch samajh nahi aa raha tha. Saad, Areeba se beinteha mohabbat karta tha…",
+        "Saad rone laga cheekh cheekh kar, itne mein awaaz aayi...",
+        "\"Saad....! Saad....! Kyun ro rahe ho tum darwaze par baith kar...\"",
+        "Yeh awaaz Saad ki walida Kulsum ki thi.. Saad ko hallucination ki wajah se Areeba nazar aa rahi thi..",
+        "Yeh ek khwaab bhi tha aur ek moajzaa bhi, kyunke Saad poison khaane hi wala tha, aur usi waqt use Areeba ne aakar bacha liya.. chahe ise hum khwaab kahein ya hallucination, yeh koi moajze se kam nahi...",
+        "Kulsum ne Saad ko uthaya aur gale se laga kar kaha…",
+        "\"Mere bachhe, mai jaanti hun yeh waqt aur aane waali zindagi tumhare liye kaafi kathin hogi, magar jis wajah se Areeba ne tumse do saal tak apni bimari aur apni maut ko chupaaye rakha, us wajah ko tum kamzor na hone dena — tumhe apne aap ko mazboot banaaye rakhna hoga..\"",
+        "Saad ne rote huve kahaa, \"Ammi, mai Areeba ke bagair nahi reh sakta. Uski diary padhne ke baad mujhe usse aur gehri mohabbat ho gayi hain. Usne mere mustaqbil ki parwah karte huve mujhe ek cheez na bataayi, aur yeh sab akele hi woh jhelti rahi..\"",
+        "\"Mai uske mohabbat ka mujrim hun ammi...\"",
+        "\"Aur aapne, aur Maham ne, aur baaki logon mein se kisi ne bhi mujhe ek dafa bhi nahi bataaya ke Areeba nahi rahi\"",
+        "Kulsum ne gamgheen awaaz mein kaha ke \"Saad, hum majboor the. Areeba ne hum sab se wada le rakha tha ke tumhe kuch na bataaya jaaye jab tak tum yahan na lauto\"",
+        "Saad ne kuch nahi kaha, bas rone laga... Saad ko lag raha tha ke woh agar yahan hota to apni mehboob ki zindagi bacha leta..",
+        "Kulsum kuch der khamosh rahi aur kehne lagi, \"Saad beta, zindagi aur maut ke faisle insaanon ke haathon mein nahi hote. Hum un patton ke maanind hain jinke ikhtiyaar mein kuch nahi hota.. jab hawa chalti hai to jin patton ke naseeb mein girna hota hai woh gir hi jaate hain, na darakht isme kuch kar sakta tha, na patte, aur na hawa, yeh bas qudrat ka ek faisla hota hain\"",
+        "Saad ke aansu tham gaye the.. woh abhi bhi apni walida ke seene se lipta huva tha...",
+        "Kulsum ne samjhaane wale andaaz mein use kahaa ke \"Saad, tumhe himmat rakhni hain, apne aapko tootne nahi dena hain, abhi to tumhe Areeba ki aakhri khwaahish bhi poori karni hain\"",
+        "\"Aakhri khwaahish???\" Saad ne sawaaliya andaaz mein poocha..."
+      ],
+      continues: "continued in Part 8"
+    },
+    {
+      date: "2026-07-08",
+      part: "Part 8",
+      titleUrdu: "Raakh",
+      titleEn: "Sach",
+      roman: true,
+      body: [
+        "Saad ki awaaz toot chuki thi.",
+        "Usne dohraya \"Aakhri khwaahish...?\"",
+        "Kulsum ne uski taraf dekha.",
+        "Aaj unhe apna beta pehli baar woh chhota sa bachcha laga tha... jo bachpan mein gir kar unki god mein aa jaya karta tha.",
+        "Unhone uske baalon par haath phiraya.",
+        "\"Haan beta...\"",
+        "\"Areeba ki do aakhri khwaahishein.\"",
+        "Kamre mein itni gehri khamoshi thi ke Saad ki siskiyan bhi uska bojh halka na kar paa rahi thi.",
+        "Kulsum ne dheere se kehna shuru kiya.",
+        "\"Tumhare Dubai jaane ke kuch maheene baad... jab doctors ne Areeba ko uski bimaari ki haqeeqat bata di... uske kuch waqt baat usne humein apne ghar bulaya.\"",
+        "\"Wahan uske Abbu, Professor Imran Siddiqui... uski Ammi, Shagufta Siddiqui... Maham... aur Maham ke walidain Rashid Khan aur Nusrat Khan maujood the.\"",
+        "\"Us din uske chehre par maut ka darr nahi tha...\"",
+        "\"Darr tha to sirf is baat ka...\"",
+        "\"...ke kahin Saad apne sapne adhure chhod kar wapas na aa jaye.\"",
+        "Saad ki palkon par aansu dobara bhar aaye.",
+        "Kulsum ne baat jaari rakhi.",
+        "\"Usne hum sab se kaha...\"",
+        "'Agar Saad ko meri bimaari ka pata chal gaya... to woh laut aayega.'",
+        "'Woh apni zindagi mere bistar ke paas guzaar dega.'",
+        "'Main uski mohabbat ki wajah se uska mustaqbil barbaad nahi kar sakti.'",
+        "'Agar usse mujhse nafrat karni pade... to kar lene dijiye.'",
+        "'Lekin uske sapne tootne mat dijiye, mere paas toh waise bhi kuch dino ka hi waqt hain'",
+        "Saad ne dono haathon se apna chehra dhaank liya.",
+        "Uski saansein bhaari hoti ja rahi thin.",
+        "Uske zehan ke band darwaze ek ek karke khulne lage.",
+        "Use yaad aayi...",
+        "Woh raat...",
+        "Jab usne Areeba ko bechain hokar lagataar call kiye the.",
+        "Har ring ke baad ek hi umeed hoti...",
+        "\"Shayad is baar woh phone utha le...\"",
+        "Magar har baar khamoshi hi uska jawab banti rahi.",
+        "Use yaad aayi...",
+        "Woh subah...",
+        "Jab usne gusse mein mobile deewar par de maara tha.",
+        "Aur toot kar sirf itna kaha tha...",
+        "\"Areeba... aakhir meri khata kya thi...?\"",
+        "Use yaad aayi...",
+        "Dubai ki woh tanha raaten...",
+        "Jab har naya project poora karne ke baad woh sabse pehle mobile uthata...",
+        "Phir yaad aata...",
+        "Ab bhejne ke liye koi paighaam baaqi hi nahi raha.",
+        "Use yaad aaya...",
+        "Library ka woh pehla din...",
+        "Jab Areeba ne usse sirf ek kitaab maangi thi...",
+        "Aur usne mazaak mein kaha tha,",
+        "\"Yeh kitaab muje lautani padhegi.\"",
+        "Areeba muskura kar boli thi,",
+        "\"Kitaabein laut sakti hain... magar log nahi.\"",
+        "Us waqt dono hans diye the.",
+        "Aaj wohi jumla uske dil ko cheer raha tha.",
+        "Use Anarkali ki woh gali yaad aayi...",
+        "Jahan baarish se bachne ke liye dono ek purani dukaan ke saaye tale khade ho gaye the.",
+        "Areeba ne hans kar poocha tha...",
+        "\"Agar ek din main kho gayi toh?\"",
+        "Saad ne bina soche jawab diya tha...",
+        "\"Main poori duniya bhar me kahi na kahi se talash kar hi loonga tumhe.\"",
+        "Aaj usse mehsoos hua...",
+        "Insaan poori duniya me sirf use hi talash kar sakta hai jo duniya maujood ho...",
+        "Kulsum ki awaaz ne uski soch tod di.",
+        "\"Beta...\"",
+        "\"Jis din tum usse bewafa samajh kar toot rahe the...\"",
+        "\"Us din woh hospital ke kamre mein chemotherapy ke dard se lad rahi thi.\"",
+        "\"Jis din tum uske ek jawab ka intezaar kar rahe the...\"",
+        "\"Us din woh apni zindagi ke chand bache hue din guzar rahi thi.\"",
+        "\"Jis din tum usse kos rahe the...\"",
+        "\"Us din woh tumhare liye dua kar rahi thi.\"",
+        "Saad ki cheekh nikal gayi.",
+        "\"Nahi...!\"",
+        "\"Bas Ammi... bas...\"",
+        "\"Allah ke liye aur mat kahiye...\"",
+        "\"Main aur bardasht nahi kar paaunga...\"",
+        "Kulsum ki aankhon se aansu beh nikle.",
+        "Unhone Saad ko apni baahon mein bhar liya.",
+        "Saad fut-futkar rone laga..",
+        "Kuch der baad Kulsum ne uske aansuon ko pocha, aur kaha..",
+        "\"Areeba ne us din Maham ko apni diary di thi.\"",
+        "\"Usne kaha tha...\"",
+        "'Isse Saad ko us waqt dena... jab woh Lahore laut aaye.'",
+        "Aur Maham ne waise hi kiya..",
+        "Kulsum kuch der khamosh rahi, phir ek dafa Kulsum ne saad ke aansu poche aur kaha..",
+        "\"Uski pehli khwaahish... yeh hai ke...\"",
+        "\"Tum Ek aisa Cancer Hospital banana... jahan koi bhi mareez sirf paiso ki kami ki wajah se ilaaj se mehroom na rahe.\"",
+        "\"Uska kehna tha...\"",
+        "'Main shayad bach na sakun... lekin meri wajah se kisi aur ki maa apni aulaad ko na khoye.'",
+        "Saad ne larazte hue honton se kaha,",
+        "\"Main qasam khata hoon...\"",
+        "\"Uski yeh khwahish zaroor poora karunga.\"",
+        "Kulsum ne dheere se sir hilaaya.",
+        "Unke chehre par dard ke saath ek bojh bhi tha...",
+        "Ek aisa bojh jo kafi waqt se unke seene par tha.",
+        "\"Magar beta...\"",
+        "\"Uski doosri khwaahish...\"",
+        "\"Uski doosri khwaahish bhi tumhe poori karni hogi...\"",
+        "Saad ka dil zor se dhadakne laga.",
+        "\"Ammi... kya hain uski doosri khwaahish?\"",
+        "Kulsum ne uski aankhon mein dekha.",
+        "Unki awaaz laraz rahi thi.",
+        "\"Uska jawab mere paas nahi...\"",
+        "\"Us shaks ke paas hai jise Areeba ne apni aakhri amanat bana kar chhoda hain.\"",
+        "Saad ne hairani se sawal  kiya.",
+        "\"Kaun...?\"",
+        "Kulsum ne sirf kaha,",
+        "\"Abhi tum sojao... tumhari tabiyat bigad rahi hain.. Kal subah mere saath chalna...\"",
+        "\"Kal..\"",
+        "Tumhari zindagi ka sabse mushkil sach tumhara intezaar kar raha hai..."
+      ],
+      continues: "to be continued"
+    }
+  ];
+
+  /* ==================================================================
+     CHAPTER THEMES
+     ------------------------------------------------------------------
+     One mood per story part. Index 0 = Part 1, and so on. If there
+     are more stories than themes, the list simply loops back to the
+     start (STORIES.length % THEMES.length), so publishing new parts
+     never breaks anything — it just reuses an earlier mood until you
+     add a new theme object here yourself.
+     ================================================================== */
+  const THEMES = [
+    { // 1 — hopeful golden sunset
+      name:"Dusk — Hopeful",
+      bg1:"#1a1108", bg2:"#241708", bg3:"#170f07",
+      glowA:"rgba(255,183,77,0.20)", glowB:"rgba(232,118,58,0.12)", glowC:"rgba(216,172,83,0.08)",
+      accent:"#E8A23A", accent2:"#F2C879",
+      particles:{ shape:"glow", behavior:"rise", count:24, colors:["#F2C879","#E8A23A","#FFD98A"], size:[2,4], speed:[6,11], opacity:[0.35,0.7], drift:[20,50] }
+    },
+    { // 2 — cool blue rain
+      name:"Rainfall — Distance",
+      bg1:"#070c14", bg2:"#0a1420", bg3:"#060a10",
+      glowA:"rgba(95,168,224,0.16)", glowB:"rgba(60,110,190,0.10)", glowC:"rgba(40,80,150,0.08)",
+      accent:"#5FA8E0", accent2:"#8FC7F2",
+      particles:{ shape:"line", behavior:"fall", count:70, colors:["#9FD0F5","#CFE8FF"], size:[10,22], speed:[16,26], opacity:[0.2,0.45], drift:[-6,-2] }
+    },
+    { // 3 — grey fog, wind
+      name:"Fog — Unraveling",
+      bg1:"#101012", bg2:"#16161a", bg3:"#0d0d0f",
+      glowA:"rgba(150,150,160,0.10)", glowB:"rgba(120,120,130,0.08)", glowC:"rgba(100,100,110,0.06)",
+      accent:"#9C9CA6", accent2:"#C7C7D1",
+      particles:{ shape:"blob", behavior:"drift", count:9, colors:["rgba(170,170,180,0.5)","rgba(150,150,165,0.4)"], size:[120,220], speed:[3,7], opacity:[0.12,0.22], drift:[10,30] }
+    },
+    { // 4 — burning amber, ash
+      name:"Ash — Reckoning",
+      bg1:"#170d06", bg2:"#1f1006", bg3:"#130a05",
+      glowA:"rgba(232,118,58,0.20)", glowB:"rgba(200,90,40,0.12)", glowC:"rgba(160,70,30,0.08)",
+      accent:"#E8763A", accent2:"#F2954F",
+      particles:{ shape:"glow", behavior:"rise", count:28, colors:["#E8763A","#C1554B","#FFB07A"], size:[1.5,3.2], speed:[8,15], opacity:[0.3,0.6], drift:[15,40] }
+    },
+    { // 5 — deep crimson, embers
+      name:"Embers — Grief",
+      bg1:"#140606", bg2:"#1c0808", bg3:"#100404",
+      glowA:"rgba(193,85,75,0.20)", glowB:"rgba(122,50,46,0.14)", glowC:"rgba(90,35,32,0.08)",
+      accent:"#C1554B", accent2:"#E8763A",
+      particles:{ shape:"glow", behavior:"rise", count:24, colors:["#E8763A","#C1554B"], size:[2,5], speed:[6,11], opacity:[0.35,0.65], drift:[20,45] }
+    },
+    { // 6 — moonlight, cold mist
+      name:"Moonlight — Reveal",
+      bg1:"#0a0e14", bg2:"#0d131c", bg3:"#080b10",
+      glowA:"rgba(140,170,220,0.16)", glowB:"rgba(180,200,235,0.10)", glowC:"rgba(120,150,200,0.06)",
+      accent:"#8FA9D6", accent2:"#C7D6F0",
+      particles:{ shape:"glow", behavior:"rise", count:20, colors:["#C7D6F0","#8FA9D6","#FFFFFF"], size:[1,2.6], speed:[4,8], opacity:[0.3,0.6], drift:[10,25] }
+    },
+    { // 7 — mystical white light, aurora
+      name:"Aurora — Miracle",
+      bg1:"#0b0a12", bg2:"#100e1c", bg3:"#08070e",
+      glowA:"rgba(220,200,255,0.18)", glowB:"rgba(160,140,255,0.12)", glowC:"rgba(255,255,255,0.06)",
+      accent:"#C9B6FF", accent2:"#F1E8FF",
+      aurora:true,
+      particles:{ shape:"glow", behavior:"rise", count:22, colors:["#F1E8FF","#C9B6FF","#FFFFFF"], size:[1,2.2], speed:[3,6], opacity:[0.3,0.65], drift:[8,20] }
+    },
+    { // 8 — black and gold, cinematic finale
+      name:"Gold — The Truth Awaits",
+      bg1:"#060503", bg2:"#0a0806", bg3:"#040302",
+      glowA:"rgba(216,172,83,0.18)", glowB:"rgba(232,118,58,0.06)", glowC:"rgba(216,172,83,0.05)",
+      accent:"#D8AC53", accent2:"#F2D48A",
+      particles:{ shape:"glow", behavior:"fall", count:18, colors:["#D8AC53","#F2D48A"], size:[1.5,3], speed:[2,4.5], opacity:[0.3,0.6], drift:[-5,5] }
+    }
+  ];
+
+  const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---------------- helpers ---------------- */
+
+  function escapeText(str){ return str; } // textContent used everywhere, no HTML escaping needed
+
+  function themeFor(i){ return THEMES[i % THEMES.length]; }
+
+  function buildBgCss(t){
+    return 'radial-gradient(ellipse 900px 500px at 50% -10%, ' + t.glowA + ', transparent 60%),' +
+           'radial-gradient(ellipse 700px 600px at 85% 30%, ' + t.glowB + ', transparent 65%),' +
+           'radial-gradient(ellipse 600px 500px at 8% 65%, ' + t.glowC + ', transparent 60%),' +
+           'linear-gradient(180deg, ' + t.bg1 + ' 0%, ' + t.bg2 + ' 40%, ' + t.bg3 + ' 100%)';
+  }
+
+  /* ---------------- render story feed ---------------- */
+
+  function wrapWords(text){
+    // returns a DocumentFragment of the text split into
+    // <span class="word"> pieces for a staggered reveal
+    const frag = document.createDocumentFragment();
+    const words = text.split(' ');
+    words.forEach((w, i) => {
+      const span = document.createElement('span');
+      span.className = 'word';
+      span.style.setProperty('--wi', i);
+      span.textContent = w + (i < words.length - 1 ? '\u00A0' : '');
+      frag.appendChild(span);
+    });
+    return frag;
+  }
+
+  function estimateReadTime(body){
+    const words = body.join(' ').trim().split(/\s+/).filter(Boolean).length;
+    return Math.max(1, Math.round(words / 200));
+  }
+
+  function renderStories(){
+    const feed = document.getElementById('storyFeed');
+    feed.innerHTML = '';
+
+    STORIES.forEach((s, idx) => {
+      const article = document.createElement('article');
+      article.className = 'story';
+      article.dataset.themeIndex = idx;
+
+      const meta = document.createElement('div');
+      meta.className = 'story-meta';
+      const partSpan = document.createElement('span');
+      partSpan.className = 'part';
+      partSpan.textContent = s.part;
+      const readSpan = document.createElement('span');
+      readSpan.className = 'read-time';
+      readSpan.textContent = estimateReadTime(s.body) + ' min read';
+      meta.appendChild(partSpan);
+      meta.appendChild(readSpan);
+      article.appendChild(meta);
+
+      const h2 = document.createElement('h2');
+      h2.className = 'story-title' + (s.roman ? ' roman' : '');
+      h2.appendChild(wrapWords(s.titleUrdu));
+      if(s.titleEn){
+        const en = document.createElement('span');
+        en.className = 'en';
+        en.appendChild(wrapWords(s.titleEn));
+        h2.appendChild(en);
+      }
+      article.appendChild(h2);
+
+      const bodyDiv = document.createElement('div');
+      bodyDiv.className = 'story-body';
+      s.body.forEach((para, pi) => {
+        const p = document.createElement('p');
+        p.style.transitionDelay = (pi % 6) * 70 + 'ms';
+        p.textContent = para;
+        bodyDiv.appendChild(p);
+      });
+      article.appendChild(bodyDiv);
+
+      if(s.continues){
+        const cont = document.createElement('div');
+        cont.className = 'story-continues';
+        cont.textContent = s.continues;
+        article.appendChild(cont);
+      }
+
+      feed.appendChild(article);
+    });
+  }
+
+  /* ---------------- fracture-title build (hero + loader) ---------------- */
+
+  function buildFractureTitle(el, textClass){
+    const text = "broken_urdu";
+    el.innerHTML = '';
+    text.split('').forEach((ch, i) => {
+      const s = document.createElement('span');
+      s.textContent = ch === ' ' ? '\u00A0' : ch;
+      if (i < 6) s.classList.add('brk'); // "broken"
+      if(textClass === 'hero'){
+        const dx = (Math.random() * 60 - 30).toFixed(1) + 'px';
+        const dy = (Math.random() * 40 - 20).toFixed(1) + 'px';
+        const dr = (Math.random() * 40 - 20).toFixed(1) + 'deg';
+        s.style.setProperty('--dx', dx);
+        s.style.setProperty('--dy', dy);
+        s.style.setProperty('--dr', dr);
+      }
+      s.style.setProperty('--i', i);
+      el.appendChild(s);
+    });
+  }
+
+  /* ---------------- atmosphere crossfade ---------------- */
+
+  let activeLayer = 'A';
+  let currentThemeIdx = -1;
+
+  function setTheme(idx, immediate){
+    if(idx === currentThemeIdx) return;
+    currentThemeIdx = idx;
+    const t = themeFor(idx);
+
+    document.body.dataset.theme = (idx % THEMES.length) + 1;
+
+    const layerShow = document.getElementById('atmo' + (activeLayer === 'A' ? 'B' : 'A'));
+    const layerHide = document.getElementById('atmo' + activeLayer);
+    layerShow.style.background = buildBgCss(t);
+    if(immediate){
+      layerHide.style.transition = 'none';
+      layerShow.style.transition = 'none';
+    }
+    layerShow.classList.add('is-active');
+    layerHide.classList.remove('is-active');
+    if(immediate){
+      requestAnimationFrame(() => {
+        layerHide.style.transition = '';
+        layerShow.style.transition = '';
+      });
+    }
+    activeLayer = activeLayer === 'A' ? 'B' : 'A';
+
+    document.documentElement.style.setProperty('--accent', t.accent);
+    document.documentElement.style.setProperty('--accent-2', t.accent2);
+
+    currentParticleTheme = t;
+
+    const story = STORIES[idx];
+    document.getElementById('chapterNum').textContent = story.part;
+    document.getElementById('chapterMood').textContent = story.titleEn || story.titleUrdu;
+  }
+
+  /* ---------------- particle engine ---------------- */
+
+  const canvas = document.getElementById('particles');
+  const ctx = canvas.getContext('2d');
+  let particles = [];
+  let currentParticleTheme = THEMES[0];
+  const isSmallScreen = window.innerWidth < 700;
+  const MAX_PARTICLES = isSmallScreen ? 16 : 28;
+
+  function rand(min, max){ return Math.random() * (max - min) + min; }
+
+  function resizeCanvas(){
+    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    canvas.width = window.innerWidth * dpr;
+    canvas.height = window.innerHeight * dpr;
+    canvas.style.width = window.innerWidth + 'px';
+    canvas.style.height = window.innerHeight + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function spawnParticle(p){
+    const cfg = currentParticleTheme.particles;
+    p = p || {};
+    p.shape = cfg.shape;
+    p.behavior = cfg.behavior;
+    p.color = cfg.colors[Math.floor(Math.random() * cfg.colors.length)];
+    p.size = rand(cfg.size[0], cfg.size[1]);
+    p.speed = rand(cfg.speed[0], cfg.speed[1]);
+    p.driftAmt = rand(cfg.drift[0], cfg.drift[1]);
+    p.opacityPeak = rand(cfg.opacity[0], cfg.opacity[1]);
+    p.phase = Math.random() * Math.PI * 2;
+    p.x = Math.random() * window.innerWidth;
+
+    if(p.behavior === 'rise'){
+      p.y = window.innerHeight + rand(0, 40);
+    } else if(p.behavior === 'fall'){
+      p.y = -rand(0, 40);
+    } else { // drift
+      p.y = Math.random() * window.innerHeight;
+    }
+    return p;
+  }
+
+  function initParticles(){
+    particles = [];
+    if(prefersReduced) return;
+    for(let i = 0; i < MAX_PARTICLES; i++){
+      particles.push(spawnParticle({}));
+    }
+  }
+
+  function drawParticle(p, t){
+    ctx.globalAlpha = p.opacityPeak * (0.6 + 0.4 * Math.sin(p.phase + t * 0.001));
+    if(p.shape === 'line'){
+      ctx.strokeStyle = p.color;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+      ctx.lineTo(p.x + p.driftAmt * 0.15, p.y - p.size);
+      ctx.stroke();
+    } else {
+      const grd = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
+      grd.addColorStop(0, p.color);
+      grd.addColorStop(1, 'transparent');
+      ctx.fillStyle = grd;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function stepParticle(p, dt){
+    const drift = Math.sin(p.phase + performance.now() * 0.0004) * p.driftAmt * dt;
+    if(p.behavior === 'rise'){
+      p.y -= p.speed * dt * 12;
+      p.x += drift * 0.4;
+      if(p.y < -20) spawnParticle(p);
+    } else if(p.behavior === 'fall'){
+      p.y += p.speed * dt * 12;
+      p.x += drift * 0.4;
+      if(p.y > window.innerHeight + 20) spawnParticle(p);
+    } else { // drift (fog / mist blobs)
+      p.x += p.driftAmt * dt * 6;
+      p.y += Math.sin(p.phase + performance.now() * 0.0002) * dt * 4;
+      if(p.driftAmt >= 0 && p.x - p.size > window.innerWidth) p.x = -p.size;
+      if(p.driftAmt < 0 && p.x + p.size < 0) p.x = window.innerWidth + p.size;
+    }
+  }
+
+  let lastFrame = performance.now();
+  function animate(now){
+    requestAnimationFrame(animate);
+    const dt = Math.min((now - lastFrame) / 16.67, 3);
+    lastFrame = now;
+    ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+    particles.forEach(p => { stepParticle(p, dt); drawParticle(p, now); });
+  }
+
+  /* ---------------- reading progress ---------------- */
+
+  function updateProgress(){
+    const scrollTop = window.scrollY;
+    const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+    const pct = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+    document.getElementById('progressFill').style.width = pct + '%';
+  }
+
+  /* ---------------- chapter + paragraph observers ---------------- */
+
+  function initObservers(){
+    const pill = document.getElementById('chapterPill');
+    const chapterObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if(entry.isIntersecting){
+          const idx = parseInt(entry.target.dataset.themeIndex, 10);
+          setTheme(idx, false);
+          pill.classList.add('visible');
+        }
+      });
+    }, { rootMargin: '-42% 0px -42% 0px', threshold: 0 });
+
+    document.querySelectorAll('.story').forEach(article => {
+      chapterObserver.observe(article);
+    });
+
+    const paraObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if(entry.isIntersecting){
+          entry.target.classList.add('seen');
+          paraObserver.unobserve(entry.target);
+        }
+      });
+    }, { rootMargin: '0px 0px -8% 0px', threshold: 0.1 });
+
+    document.querySelectorAll('.story-body p').forEach(p => paraObserver.observe(p));
+
+    if(prefersReduced){
+      document.querySelectorAll('.story-body p').forEach(p => p.classList.add('seen'));
+    }
+  }
+
+  /* ---------------- mouse-reactive card glow ---------------- */
+
+  function initCardGlow(){
+    if(!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+    let ticking = false;
+    document.querySelectorAll('.story').forEach(card => {
+      card.addEventListener('pointermove', (e) => {
+        if(ticking) return;
+        ticking = true;
+        requestAnimationFrame(() => {
+          const rect = card.getBoundingClientRect();
+          const mx = ((e.clientX - rect.left) / rect.width) * 100;
+          const my = ((e.clientY - rect.top) / rect.height) * 100;
+          card.style.setProperty('--mx', mx + '%');
+          card.style.setProperty('--my', my + '%');
+          ticking = false;
+        });
+      }, { passive:true });
+    });
+  }
+
+  /* ---------------- magnetic + ripple buttons ---------------- */
+
+  function initMagnetic(el, strength){
+    if(prefersReduced) return;
+    if(!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+    el.addEventListener('pointermove', (e) => {
+      const rect = el.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const dx = (e.clientX - cx) / (rect.width / 2);
+      const dy = (e.clientY - cy) / (rect.height / 2);
+      el.style.transform = 'translate(' + (dx * strength) + 'px, ' + (dy * strength) + 'px)';
+    });
+    el.addEventListener('pointerleave', () => {
+      el.style.transform = '';
+    });
+  }
+
+  function initRipple(el){
+    el.addEventListener('click', (e) => {
+      const rect = el.getBoundingClientRect();
+      const ripple = document.createElement('span');
+      ripple.className = 'ripple';
+      const size = Math.max(rect.width, rect.height);
+      ripple.style.width = ripple.style.height = size + 'px';
+      ripple.style.left = (e.clientX - rect.left - size / 2) + 'px';
+      ripple.style.top = (e.clientY - rect.top - size / 2) + 'px';
+      el.appendChild(ripple);
+      setTimeout(() => ripple.remove(), 650);
+    });
+  }
+
+  /* ---------------- loader ---------------- */
+
+  function initLoader(){
+    const loader = document.getElementById('loader');
+    const finish = () => {
+      document.body.classList.remove('loading');
+      loader.classList.add('hidden');
+    };
+    if(prefersReduced){
+      finish();
+      return;
+    }
+    buildFractureTitle(document.getElementById('loaderTitle'), 'loader');
+    window.addEventListener('load', () => setTimeout(finish, 900));
+    // safety net in case load already fired or is slow to arrive
+    setTimeout(finish, 2400);
+  }
+
+  /* ---------------- init ---------------- */
+
+  function init(){
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    renderStories();
+    buildFractureTitle(document.getElementById('fractureTitle'), 'hero');
+
+    setTheme(0, true);
+    initParticles();
+    if(!prefersReduced) requestAnimationFrame(animate);
+
+    initObservers();
+    initCardGlow();
+    initMagnetic(document.getElementById('heroInsta'), 6);
+    initRipple(document.getElementById('heroInsta'));
+
+    let scrollTicking = false;
+    window.addEventListener('scroll', () => {
+      if(scrollTicking) return;
+      scrollTicking = true;
+      requestAnimationFrame(() => { updateProgress(); scrollTicking = false; });
+    }, { passive: true });
+    updateProgress();
+
+    initLoader();
+  }
+
+  init();
+</script>
+
+</body>
+</html>
