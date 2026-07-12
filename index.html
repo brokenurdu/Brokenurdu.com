@@ -24,21 +24,21 @@
      TOKENS
      ============================================ */
   :root{
-    --ink:      #0F0B0A;
-    --ink-2:    #1C1411;
-    --panel:    rgba(24, 18, 15, 0.55);
-    --panel-solid: rgba(21, 16, 13, 0.86);
-    --panel-border: rgba(214, 169, 75, 0.14);
+    --ink:      #0D0709;
+    --ink-2:    #170F12;
+    --panel:    rgba(23, 15, 18, 0.55);
+    --panel-solid: rgba(20, 13, 15, 0.86);
+    --panel-border: rgba(201, 166, 107, 0.14);
     --bone:     #F2E9D8;
     --bone-dim: #C4B79E;
-    --ember:    #C1554B;
-    --ember-dim:#7A322E;
-    --ember-glow: #E8763A;
-    --gold:     #D8AC53;
-    --line:     #3B2E27;
+    --ember:    #8C3A46;
+    --ember-dim:#4E1F27;
+    --ember-glow: #C9767B;
+    --gold:     #C9A66B;
+    --line:     #3B2A2D;
 
-    --accent:   #D8AC53;
-    --accent-2: #F2D48A;
+    --accent:   #C9A66B;
+    --accent-2: #E4C68F;
 
     --f-urdu:  'Noto Nastaliq Urdu', serif;
     --f-body:  'Lora', Georgia, serif;
@@ -127,7 +127,7 @@
   .loader{
     position:fixed; inset:0; z-index:999;
     display:flex; align-items:center; justify-content:center;
-    background:#0F0B0A;
+    background:#0D0709;
     transition:opacity .8s ease, visibility .8s ease;
   }
   .loader.hidden{opacity:0; visibility:hidden; pointer-events:none;}
@@ -216,7 +216,7 @@
     font-size:13px;
     letter-spacing:0.02em;
     color:var(--bone-dim);
-    box-shadow:inset 0 -1px 0 rgba(216,172,83,0.16);
+    box-shadow:inset 0 -1px 0 rgba(201,166,107,0.16);
     transition:box-shadow 1.8s ease;
     scroll-snap-align:none;
   }
@@ -225,7 +225,8 @@
     text-decoration:none;
     margin-left:20px;
     color:var(--bone-dim);
-    transition:color .3s ease;
+    -webkit-tap-highlight-color:transparent;
+    transition:color .3s ease, opacity .15s ease, transform .15s ease;
   }
   header.site nav a::after{
     content:"";
@@ -235,6 +236,7 @@
   }
   header.site nav a:hover{color:var(--bone);}
   header.site nav a:hover::after{right:0;}
+  header.site nav a:active{opacity:0.6; transform:scale(0.97);}
   header.site .mark{color:var(--bone); font-weight:500;}
 
   /* ============================================
@@ -250,7 +252,7 @@
   .fracture-title{
     font-family:var(--f-mono);
     font-weight:500;
-    font-size:clamp(34px, 7vw, 58px);
+    font-size:clamp(26px, 5.2vw, 44px);
     letter-spacing:-0.01em;
     margin:0 0 18px;
     white-space:nowrap;
@@ -318,11 +320,12 @@
     transition:border-color .2s ease, color .2s ease;
   }
   .hero .insta:hover{border-color:var(--ember-glow); color:var(--ember-glow);}
+  .hero .insta:active{transform:scale(0.96);}
 
   .ripple{
     position:absolute;
     border-radius:50%;
-    background:rgba(232,118,58,0.45);
+    background:rgba(201,166,107,0.4);
     transform:scale(0);
     opacity:.6;
     animation:rippleAnim .6s ease-out forwards;
@@ -380,10 +383,10 @@
     animation:hubGlow 900ms ease-in-out;
   }
   @keyframes hubGlow{
-    0%{box-shadow:0 0 0 rgba(216,172,83,0);}
-    35%{box-shadow:0 0 0 rgba(216,172,83,0);}
-    45%{box-shadow:0 0 34px -6px rgba(216,172,83,0.55);}
-    100%{box-shadow:0 0 0 rgba(216,172,83,0);}
+    0%{box-shadow:0 0 0 rgba(201,166,107,0);}
+    35%{box-shadow:0 0 0 rgba(201,166,107,0);}
+    45%{box-shadow:0 0 34px -6px rgba(201,166,107,0.55);}
+    100%{box-shadow:0 0 0 rgba(201,166,107,0);}
   }
 
   .story-list{
@@ -392,6 +395,7 @@
   }
   .story-card{
     position:relative;
+    overflow:hidden;
     display:block;
     width:100%;
     text-align:left;
@@ -402,7 +406,8 @@
     cursor:pointer;
     font-family:inherit;
     color:inherit;
-    transition:border-color .3s ease, transform .3s ease, box-shadow .3s ease;
+    -webkit-tap-highlight-color:transparent;
+    transition:border-color .3s ease, transform .15s ease, box-shadow .3s ease;
     isolation:isolate;
   }
   .story-card:hover, .story-card:focus-visible{
@@ -411,11 +416,15 @@
     box-shadow:0 18px 40px -20px rgba(0,0,0,0.55);
     outline:none;
   }
+  .story-card:active{
+    transform:translateY(-1px) scale(0.985);
+    border-color:var(--accent);
+  }
   .story-card::before{
     content:"";
     position:absolute; inset:0;
     border-radius:inherit;
-    background:radial-gradient(320px circle at var(--mx,50%) var(--my,50%), rgba(216,172,83,0.14), transparent 70%);
+    background:radial-gradient(320px circle at var(--mx,50%) var(--my,50%), rgba(201,166,107,0.14), transparent 70%);
     opacity:0;
     transition:opacity .4s ease;
     pointer-events:none;
@@ -460,6 +469,8 @@
   }
 
   .reader-back{
+    position:relative;
+    overflow:hidden;
     display:inline-flex;
     align-items:center;
     gap:6px;
@@ -473,9 +484,11 @@
     letter-spacing:0.04em;
     color:var(--bone-dim);
     cursor:pointer;
-    transition:border-color .2s ease, color .2s ease;
+    -webkit-tap-highlight-color:transparent;
+    transition:border-color .2s ease, color .2s ease, transform .15s ease;
   }
   .reader-back:hover{border-color:var(--accent); color:var(--bone);}
+  .reader-back:active{transform:scale(0.96);}
 
   /* ============================================
      STORIES
@@ -502,7 +515,7 @@
     content:"";
     position:absolute; inset:0;
     border-radius:inherit;
-    background:radial-gradient(320px circle at var(--mx,50%) var(--my,50%), rgba(216,172,83,0.14), transparent 70%);
+    background:radial-gradient(320px circle at var(--mx,50%) var(--my,50%), rgba(201,166,107,0.14), transparent 70%);
     opacity:0;
     transition:opacity .4s ease;
     pointer-events:none;
@@ -626,7 +639,7 @@
      RESPONSIVE
      ============================================ */
   @media (max-width:520px){
-    .fracture-title{font-size:9vw;}
+    .fracture-title{font-size:7vw;}
     .story-body{font-size:15px;}
     .chapter-pill{font-size:10px; padding:7px 11px;}
   }
@@ -674,8 +687,7 @@
   </section>
 
   <section class="about" id="about">
-    <p><strong>broken_urdu</strong> is a small archive of stories.</p>
-    <p>New fragments are posted as they're written, longer stories in parts — no algorithm, no feed, just words kept in order.</p>
+    <p><strong>broken_urdu</strong> is a small archive of stories — scroll down to begin reading.</p>
   </section>
 
   <section class="stories-hub" id="stories">
@@ -1062,7 +1074,6 @@
     {
       id: "raakh",
       titleUrdu: "Raakh",
-      titleEn: "Ash",
       summary: [
         "Kya mohabbat waqai kabhi khatam nahi hoti... aur Raakh ban kar hamesha hamare dilon mein bas jaati hai?",
         "Jaaniye Areeba ki is dastaan me..."
@@ -1141,6 +1152,21 @@
     }
   ];
 
+  /* ==================================================================
+     SITE (HUB) ATMOSPHERE
+     ------------------------------------------------------------------
+     This is the background mood shown on the Stories list / hero /
+     about — separate from THEMES above, which are Raakh's own
+     per-chapter moods and are never touched by this. Change this one
+     object if you ever want to restyle the site's default look.
+     ================================================================== */
+  const HUB_THEME = {
+    bg1:"#0D0709", bg2:"#170F12", bg3:"#0A0607",
+    glowA:"rgba(201,166,107,0.14)", glowB:"rgba(140,58,70,0.10)", glowC:"rgba(90,40,50,0.06)",
+    accent:"#C9A66B", accent2:"#E4C68F",
+    particles:{ shape:"glow", behavior:"rise", count:14, colors:["#E4C68F","#C9A66B","#C9767B"], size:[1.5,3], speed:[3,6], opacity:[0.2,0.45], drift:[10,25] }
+  };
+
   const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   /* ---------------- helpers ---------------- */
@@ -1215,6 +1241,7 @@
       card.appendChild(tap);
 
       card.addEventListener('click', () => openStory(collection));
+      initRipple(card);
       list.appendChild(card);
     });
   }
@@ -1240,9 +1267,13 @@
   }
 
   function backToStories(){
+    readerObservers.forEach(o => o.disconnect());
+    readerObservers = [];
+
     document.getElementById('storyReader').classList.remove('active');
     document.getElementById('stories').classList.remove('hidden');
     document.getElementById('stories').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    applyHubAtmosphere();
     updateProgress();
   }
 
@@ -1336,13 +1367,7 @@
   let activeLayer = 'A';
   let currentThemeIdx = -1;
 
-  function setTheme(idx, immediate){
-    if(idx === currentThemeIdx) return;
-    currentThemeIdx = idx;
-    const t = themeFor(idx);
-
-    document.body.dataset.theme = (idx % THEMES.length) + 1;
-
+  function applyAtmosphere(t, immediate){
     const layerShow = document.getElementById('atmo' + (activeLayer === 'A' ? 'B' : 'A'));
     const layerHide = document.getElementById('atmo' + activeLayer);
     layerShow.style.background = buildBgCss(t);
@@ -1364,10 +1389,27 @@
     document.documentElement.style.setProperty('--accent-2', t.accent2);
 
     currentParticleTheme = t;
+  }
+
+  function setTheme(idx, immediate){
+    if(idx === currentThemeIdx) return;
+    currentThemeIdx = idx;
+    const t = themeFor(idx);
+
+    document.body.dataset.theme = (idx % THEMES.length) + 1;
+    applyAtmosphere(t, immediate);
 
     const story = STORIES[idx];
     document.getElementById('chapterNum').textContent = story.part;
     document.getElementById('chapterMood').textContent = story.titleEn || story.titleUrdu;
+  }
+
+  function applyHubAtmosphere(){
+    currentThemeIdx = -1;
+    delete document.body.dataset.theme;
+    applyAtmosphere(HUB_THEME, true);
+    if(!prefersReduced) initParticles();
+    document.getElementById('chapterPill').classList.remove('visible');
   }
 
   /* ---------------- particle engine ---------------- */
@@ -1375,7 +1417,7 @@
   const canvas = document.getElementById('particles');
   const ctx = canvas.getContext('2d');
   let particles = [];
-  let currentParticleTheme = THEMES[0];
+  let currentParticleTheme = HUB_THEME;
   const isSmallScreen = window.innerWidth < 700;
   const MAX_PARTICLES = isSmallScreen ? 16 : 28;
 
@@ -1594,8 +1636,7 @@
     renderStoryList();
     buildFractureTitle(document.getElementById('fractureTitle'), 'hero');
 
-    setTheme(0, true);
-    initParticles();
+    applyHubAtmosphere();
     if(!prefersReduced) requestAnimationFrame(animate);
 
     initCardGlow();
@@ -1603,6 +1644,7 @@
     initRipple(document.getElementById('heroInsta'));
 
     document.getElementById('readerBack').addEventListener('click', backToStories);
+    initRipple(document.getElementById('readerBack'));
 
     document.querySelectorAll('a[href="#stories"]').forEach(link => {
       link.addEventListener('click', (e) => {
