@@ -506,48 +506,71 @@
   .reader-back:hover{border-color:var(--accent); color:var(--bone);}
   .reader-back:active{transform:scale(0.96);}
 
-  .reader-toc{
-    display:flex;
-    gap:8px;
-    overflow-x:auto;
-    -webkit-overflow-scrolling:touch;
-    scrollbar-width:thin;
-    padding:2px 2px 12px;
-    margin:0 0 24px;
-  }
-  .reader-toc::-webkit-scrollbar{height:3px;}
-  .reader-toc::-webkit-scrollbar-thumb{background:var(--panel-border); border-radius:2px;}
-  .reader-toc-btn{
-    position:relative;
-    overflow:hidden;
-    flex:0 0 auto;
-    padding:7px 15px;
-    border:1px solid var(--line);
-    border-radius:20px;
-    background:transparent;
-    font-family:var(--f-mono);
-    font-size:11px;
-    letter-spacing:0.04em;
-    white-space:nowrap;
-    color:var(--bone-dim);
+  /* ============================================
+     READER FAB — floating circular back button,
+     always visible inside the single-part reader
+     ============================================ */
+  .reader-fab{
+    position:fixed;
+    left:16px; bottom:16px;
+    z-index:70;
+    width:48px; height:48px;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    border-radius:50%;
+    border:1px solid var(--panel-border);
+    background:var(--panel);
+    backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
+    box-shadow:0 10px 28px -10px rgba(0,0,0,0.6);
+    color:var(--bone);
+    font-size:18px;
+    line-height:1;
     cursor:pointer;
     -webkit-tap-highlight-color:transparent;
-    transition:border-color .2s ease, color .2s ease, background .2s ease, transform .15s ease;
+    transition:border-color .2s ease, transform .15s ease, background .2s ease;
   }
-  .reader-toc-btn:hover{border-color:var(--accent); color:var(--bone);}
-  .reader-toc-btn:active{transform:scale(0.95);}
-  .reader-toc-btn.active{border-color:var(--accent); color:var(--bone); background:var(--panel);}
+  body.reading .reader-fab{display:flex;}
+  .reader-fab:hover{border-color:var(--accent); transform:translateY(-2px);}
+  .reader-fab:active{transform:scale(0.92);}
+  @media (max-width:520px){
+    .reader-fab{left:12px; bottom:12px; width:44px; height:44px; font-size:16px;}
+  }
 
-  .story-next-btn{
+  /* ============================================
+     SINGLE-PART READER STAGE + swipe/transition
+     ============================================ */
+  .reader-stage{
+    position:relative;
+    overflow-x:hidden;
+    touch-action:pan-y;
+  }
+  .reader-stage .story{
+    transition:opacity .38s ease, filter .38s ease, transform .38s ease;
+    opacity:1; filter:blur(0); transform:scale(1) translateX(0);
+  }
+  .reader-stage.leaving-next .story{opacity:0; filter:blur(10px); transform:scale(0.97) translateX(-18px);}
+  .reader-stage.leaving-prev .story{opacity:0; filter:blur(10px); transform:scale(0.97) translateX(18px);}
+  .reader-stage.entering-next .story{opacity:0; filter:blur(10px); transform:scale(0.97) translateX(18px);}
+  .reader-stage.entering-prev .story{opacity:0; filter:blur(10px); transform:scale(0.97) translateX(-18px);}
+
+  .part-nav{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin-top:24px;
+  }
+  .part-nav-btn{
     position:relative;
     overflow:hidden;
     display:inline-flex;
     align-items:center;
     gap:6px;
-    margin-top:24px;
     padding:10px 18px;
     border:1px solid var(--line);
-    border-radius:2px;
+    border-radius:24px;
     background:transparent;
     font-family:var(--f-mono);
     font-size:12px;
@@ -555,10 +578,44 @@
     color:var(--accent);
     cursor:pointer;
     -webkit-tap-highlight-color:transparent;
-    transition:border-color .2s ease, background .2s ease, transform .15s ease;
+    transition:border-color .2s ease, background .2s ease, transform .15s ease, box-shadow .2s ease;
   }
-  .story-next-btn:hover{border-color:var(--accent); background:var(--panel);}
-  .story-next-btn:active{transform:scale(0.96);}
+  .part-nav-btn:hover{border-color:var(--accent); background:var(--panel); box-shadow:0 0 22px -6px var(--accent);}
+  .part-nav-btn:active{transform:scale(0.96);}
+  .part-nav-btn.next{margin-left:auto;}
+  .part-nav-btn[disabled]{
+    opacity:0.35;
+    pointer-events:none;
+    box-shadow:none;
+  }
+  @media (max-width:420px){
+    .part-nav-btn{padding:9px 14px; font-size:11px;}
+  }
+
+  /* ============================================
+     CONTINUE READING card (hub)
+     ============================================ */
+  .continue-card{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    padding:16px 20px;
+    margin-bottom:20px;
+    border:1px solid var(--panel-border);
+    background:var(--panel-solid);
+    border-radius:5px;
+    cursor:pointer;
+    font-family:var(--f-mono);
+    color:var(--bone-dim);
+    font-size:12px;
+    letter-spacing:0.02em;
+    -webkit-tap-highlight-color:transparent;
+    transition:border-color .2s ease, transform .15s ease;
+  }
+  .continue-card:hover{border-color:var(--accent); transform:translateY(-1px);}
+  .continue-card strong{color:var(--bone); font-weight:600;}
+  .continue-card .go{color:var(--accent);}
 
   /* ============================================
      STORIES
@@ -735,6 +792,7 @@
   <span class="num" id="chapterNum">Raakh</span>
   <span class="mood" id="chapterMood">Part 1</span>
 </div>
+<button class="reader-fab" id="readerFab" type="button" aria-label="Back to parts list">&larr;</button>
 
 <div class="wrap">
 
@@ -762,6 +820,7 @@
 
   <section class="stories-hub" id="stories">
     <p class="feed-heading">Stories</p>
+    <div id="continueSlot"></div>
     <div class="story-list" id="storyList"></div>
   </section>
 
@@ -772,9 +831,9 @@
   </div>
 
   <div class="story-reader" id="storyReader">
-    <button class="reader-back" id="readerBack" type="button">&larr; parts</button>
-    <div class="reader-toc" id="readerToc" aria-label="Jump to part"></div>
-    <div id="storyFeed"></div>
+    <div class="reader-stage" id="readerStage">
+      <div id="storyFeed"></div>
+    </div>
   </div>
 
   <footer>
@@ -1462,29 +1521,252 @@
   }
 
   let readerObservers = [];
+  let currentCollection = null;
+  let currentPartIdx = -1;
 
-  function jumpToPart(idx){
-    const articles = document.querySelectorAll('#storyFeed .story');
-    const target = articles[idx];
-    if(target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  /* ---------------- reading position (localStorage) ---------------- */
+
+  const LS_KEY = 'broken_urdu_progress_v1';
+
+  function loadAllProgress(){
+    try{
+      const raw = localStorage.getItem(LS_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch(e){ return {}; }
   }
 
-  function renderReaderToc(parts){
-    const toc = document.getElementById('readerToc');
-    toc.innerHTML = '';
-    parts.forEach((s, idx) => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'reader-toc-btn';
-      btn.dataset.idx = idx;
-      btn.textContent = s.part;
-      btn.addEventListener('click', () => jumpToPart(idx));
-      initRipple(btn);
-      toc.appendChild(btn);
+  function saveProgress(collectionId, idx, scrollY){
+    try{
+      const all = loadAllProgress();
+      all[collectionId] = { idx: idx, scrollY: scrollY, ts: Date.now() };
+      localStorage.setItem(LS_KEY, JSON.stringify(all));
+    } catch(e){ /* storage unavailable — fail silently */ }
+  }
+
+  function findCollection(id){
+    for(let i = 0; i < STORY_COLLECTIONS.length; i++){
+      if(STORY_COLLECTIONS[i].id === id) return STORY_COLLECTIONS[i];
+    }
+    return null;
+  }
+
+  function renderContinueCard(){
+    const slot = document.getElementById('continueSlot');
+    slot.innerHTML = '';
+    const all = loadAllProgress();
+    const ids = Object.keys(all);
+    if(!ids.length) return;
+
+    ids.sort((a, b) => all[b].ts - all[a].ts);
+    const latestId = ids[0];
+    const saved = all[latestId];
+    const collection = findCollection(latestId);
+    if(!collection || !collection.parts[saved.idx]) return;
+
+    const part = collection.parts[saved.idx];
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'continue-card';
+
+    const label = document.createElement('span');
+    label.textContent = 'Continue reading ';
+    const strong = document.createElement('strong');
+    strong.textContent = collection.titleUrdu + ' — ' + part.part;
+    label.appendChild(strong);
+
+    const go = document.createElement('span');
+    go.className = 'go';
+    go.textContent = 'resume →';
+
+    card.appendChild(label);
+    card.appendChild(go);
+    card.addEventListener('click', () => openReaderAtPart(collection, saved.idx, false, saved.scrollY || 0));
+    initRipple(card);
+    slot.appendChild(card);
+  }
+
+  /* ---------------- browser history (back button support) ---------------- */
+
+  function pushHubState(){
+    history.pushState({ view: 'hub' }, '');
+  }
+  function pushListState(collection){
+    history.pushState({ view: 'partList', collectionId: collection.id }, '');
+  }
+  function pushReaderState(collection, idx){
+    history.pushState({ view: 'reader', collectionId: collection.id, idx: idx }, '');
+  }
+  function replaceReaderState(collection, idx){
+    history.replaceState({ view: 'reader', collectionId: collection.id, idx: idx }, '');
+  }
+
+  window.addEventListener('popstate', (e) => {
+    const state = e.state;
+    if(!state || state.view === 'hub'){
+      backToStories(true);
+      return;
+    }
+    const collection = findCollection(state.collectionId);
+    if(!collection){ backToStories(true); return; }
+    if(state.view === 'partList'){
+      openPartList(collection, true);
+    } else if(state.view === 'reader'){
+      openReaderAtPart(collection, state.idx || 0, true);
+    }
+  });
+
+  /* ---------------- single-part rendering ---------------- */
+
+  function renderPart(collection, idx){
+    const parts = collection.parts;
+    const s = parts[idx];
+    const feed = document.getElementById('storyFeed');
+    feed.innerHTML = '';
+
+    const article = document.createElement('article');
+    article.className = 'story';
+    article.dataset.themeIndex = idx;
+
+    const meta = document.createElement('div');
+    meta.className = 'story-meta';
+    const partSpan = document.createElement('span');
+    partSpan.className = 'part';
+    partSpan.textContent = s.part;
+    const readSpan = document.createElement('span');
+    readSpan.className = 'read-time';
+    readSpan.textContent = estimateReadTime(s.body) + ' min read';
+    meta.appendChild(partSpan);
+    meta.appendChild(readSpan);
+    article.appendChild(meta);
+
+    const h2 = document.createElement('h2');
+    h2.className = 'story-title' + (s.roman ? ' roman' : '');
+    h2.appendChild(wrapWords(s.titleUrdu));
+    if(s.titleEn){
+      const en = document.createElement('span');
+      en.className = 'en';
+      en.appendChild(wrapWords(s.titleEn));
+      h2.appendChild(en);
+    }
+    article.appendChild(h2);
+
+    const bodyDiv = document.createElement('div');
+    bodyDiv.className = 'story-body';
+    s.body.forEach((para, pi) => {
+      const p = document.createElement('p');
+      p.style.transitionDelay = (pi % 6) * 70 + 'ms';
+      p.textContent = para;
+      bodyDiv.appendChild(p);
     });
+    article.appendChild(bodyDiv);
+
+    if(s.continues){
+      const cont = document.createElement('div');
+      cont.className = 'story-continues';
+      cont.textContent = s.continues;
+      article.appendChild(cont);
+    }
+
+    const nav = document.createElement('div');
+    nav.className = 'part-nav';
+
+    const prevBtn = document.createElement('button');
+    prevBtn.type = 'button';
+    prevBtn.className = 'part-nav-btn prev';
+    prevBtn.innerHTML = '&larr; Previous Part';
+    if(idx <= 0){
+      prevBtn.style.visibility = 'hidden';
+      prevBtn.tabIndex = -1;
+    } else {
+      prevBtn.addEventListener('click', () => goToPart(idx - 1, 'prev'));
+      initRipple(prevBtn);
+    }
+    nav.appendChild(prevBtn);
+
+    const nextBtn = document.createElement('button');
+    nextBtn.type = 'button';
+    nextBtn.className = 'part-nav-btn next';
+    if(idx < parts.length - 1){
+      nextBtn.innerHTML = 'Next Part &rarr;';
+      nextBtn.addEventListener('click', () => goToPart(idx + 1, 'next'));
+      initRipple(nextBtn);
+    } else {
+      nextBtn.innerHTML = 'To be continued…';
+      nextBtn.disabled = true;
+    }
+    nav.appendChild(nextBtn);
+
+    article.appendChild(nav);
+    feed.appendChild(article);
+
+    readerObservers.forEach(o => o.disconnect());
+    readerObservers = initObservers();
+    initCardGlow();
   }
 
-  function openPartList(collection){
+  function goToPart(idx, direction){
+    if(!currentCollection) return;
+    const parts = currentCollection.parts;
+    if(idx < 0 || idx >= parts.length) return;
+
+    const stage = document.getElementById('readerStage');
+    stage.classList.add(direction === 'prev' ? 'leaving-prev' : 'leaving-next');
+
+    setTimeout(() => {
+      currentPartIdx = idx;
+      renderPart(currentCollection, idx);
+      currentThemeIdx = -1;
+      setTheme(idx, false, parts);
+
+      stage.classList.remove('leaving-next', 'leaving-prev');
+      stage.classList.add(direction === 'prev' ? 'entering-prev' : 'entering-next');
+      // force layout so the entering state actually paints before we clear it
+      void stage.offsetWidth;
+      requestAnimationFrame(() => {
+        stage.classList.remove('entering-next', 'entering-prev');
+      });
+
+      window.scrollTo(0, 0);
+      updateProgress();
+      saveProgress(currentCollection.id, idx, 0);
+      replaceReaderState(currentCollection, idx);
+    }, 320);
+  }
+
+  /* ---------------- swipe navigation ---------------- */
+
+  function initSwipe(){
+    const stage = document.getElementById('readerStage');
+    let startX = 0, startY = 0, tracking = false;
+
+    stage.addEventListener('touchstart', (e) => {
+      if(e.touches.length !== 1) return;
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      tracking = true;
+    }, { passive: true });
+
+    stage.addEventListener('touchend', (e) => {
+      if(!tracking) return;
+      tracking = false;
+      const dx = e.changedTouches[0].clientX - startX;
+      const dy = e.changedTouches[0].clientY - startY;
+      if(Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.4) return;
+      if(dx < 0) goToPart(currentPartIdx + 1, 'next');
+      else goToPart(currentPartIdx - 1, 'prev');
+    }, { passive: true });
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if(!document.getElementById('storyReader').classList.contains('active')) return;
+    if(e.key === 'ArrowRight') goToPart(currentPartIdx + 1, 'next');
+    if(e.key === 'ArrowLeft') goToPart(currentPartIdx - 1, 'prev');
+  });
+
+  /* ---------------- view transitions (hub / part list / reader) ---------------- */
+
+  function openPartList(collection, skipHistory){
+    currentCollection = collection;
     renderPartList(collection);
 
     document.body.classList.add('reading');
@@ -1496,32 +1778,37 @@
     initCardGlow();
     partListView.scrollIntoView({ behavior: 'smooth', block: 'start' });
     document.getElementById('partListBack').focus({ preventScroll: true });
+
+    if(!skipHistory) pushListState(collection);
   }
 
-  function openReaderAtPart(collection, startIdx){
-    renderStories(collection.parts);
-    renderReaderToc(collection.parts);
+  function openReaderAtPart(collection, startIdx, skipHistory, restoreScrollY){
+    currentCollection = collection;
+    currentPartIdx = startIdx;
 
     document.getElementById('partListView').classList.remove('active');
+    document.getElementById('stories').classList.add('hidden');
+    document.body.classList.add('reading');
     const reader = document.getElementById('storyReader');
     reader.classList.add('active');
 
-    // (re)attach observers + interactions to the freshly rendered parts
-    readerObservers.forEach(o => o.disconnect());
-    readerObservers = initObservers();
-    initCardGlow();
-    setTheme(startIdx, true);
+    const stage = document.getElementById('readerStage');
+    stage.classList.remove('leaving-next', 'leaving-prev', 'entering-next', 'entering-prev');
+
+    renderPart(collection, startIdx);
+    currentThemeIdx = -1;
+    setTheme(startIdx, true, collection.parts);
 
     reader.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    window.scrollTo(0, restoreScrollY || 0);
     updateProgress();
-    document.getElementById('readerBack').focus({ preventScroll: true });
+    document.getElementById('readerFab').focus({ preventScroll: true });
 
-    if(startIdx > 0){
-      requestAnimationFrame(() => jumpToPart(startIdx));
-    }
+    saveProgress(collection.id, startIdx, restoreScrollY || 0);
+    if(!skipHistory) pushReaderState(collection, startIdx);
   }
 
-  function backToPartList(){
+  function backToPartList(skipHistory){
     readerObservers.forEach(o => o.disconnect());
     readerObservers = [];
 
@@ -1530,9 +1817,11 @@
     document.getElementById('partListView').scrollIntoView({ behavior: 'smooth', block: 'start' });
     applyHubAtmosphere();
     updateProgress();
+
+    if(!skipHistory && currentCollection) pushListState(currentCollection);
   }
 
-  function backToStories(){
+  function backToStories(skipHistory){
     readerObservers.forEach(o => o.disconnect());
     readerObservers = [];
 
@@ -1543,6 +1832,9 @@
     document.getElementById('stories').scrollIntoView({ behavior: 'smooth', block: 'start' });
     applyHubAtmosphere();
     updateProgress();
+    renderContinueCard();
+
+    if(!skipHistory) pushHubState();
   }
 
   function flickerStoriesHub(){
@@ -1552,70 +1844,6 @@
     void hub.offsetWidth;
     hub.classList.add('flicker');
     setTimeout(() => hub.classList.remove('flicker'), 950);
-  }
-
-  function renderStories(parts){
-    const storyParts = parts || STORIES;
-    const feed = document.getElementById('storyFeed');
-    feed.innerHTML = '';
-
-    storyParts.forEach((s, idx) => {
-      const article = document.createElement('article');
-      article.className = 'story';
-      article.dataset.themeIndex = idx;
-
-      const meta = document.createElement('div');
-      meta.className = 'story-meta';
-      const partSpan = document.createElement('span');
-      partSpan.className = 'part';
-      partSpan.textContent = s.part;
-      const readSpan = document.createElement('span');
-      readSpan.className = 'read-time';
-      readSpan.textContent = estimateReadTime(s.body) + ' min read';
-      meta.appendChild(partSpan);
-      meta.appendChild(readSpan);
-      article.appendChild(meta);
-
-      const h2 = document.createElement('h2');
-      h2.className = 'story-title' + (s.roman ? ' roman' : '');
-      h2.appendChild(wrapWords(s.titleUrdu));
-      if(s.titleEn){
-        const en = document.createElement('span');
-        en.className = 'en';
-        en.appendChild(wrapWords(s.titleEn));
-        h2.appendChild(en);
-      }
-      article.appendChild(h2);
-
-      const bodyDiv = document.createElement('div');
-      bodyDiv.className = 'story-body';
-      s.body.forEach((para, pi) => {
-        const p = document.createElement('p');
-        p.style.transitionDelay = (pi % 6) * 70 + 'ms';
-        p.textContent = para;
-        bodyDiv.appendChild(p);
-      });
-      article.appendChild(bodyDiv);
-
-      if(idx < storyParts.length - 1){
-        const nextBtn = document.createElement('button');
-        nextBtn.type = 'button';
-        nextBtn.className = 'story-next-btn';
-        nextBtn.textContent = 'Next: ' + storyParts[idx + 1].part + ' →';
-        nextBtn.addEventListener('click', () => jumpToPart(idx + 1));
-        initRipple(nextBtn);
-        article.appendChild(nextBtn);
-      }
-
-      if(s.continues){
-        const cont = document.createElement('div');
-        cont.className = 'story-continues';
-        cont.textContent = s.continues;
-        article.appendChild(cont);
-      }
-
-      feed.appendChild(article);
-    });
   }
 
   /* ---------------- fracture-title build (hero + loader) ---------------- */
@@ -1669,7 +1897,7 @@
     currentParticleTheme = t;
   }
 
-  function setTheme(idx, immediate){
+  function setTheme(idx, immediate, parts){
     if(idx === currentThemeIdx) return;
     currentThemeIdx = idx;
     const t = themeFor(idx);
@@ -1677,9 +1905,10 @@
     document.body.dataset.theme = (idx % THEMES.length) + 1;
     applyAtmosphere(t, immediate);
 
-    const story = STORIES[idx];
+    const story = (parts || STORIES)[idx];
     document.getElementById('chapterNum').textContent = story.part;
     document.getElementById('chapterMood').textContent = story.titleEn || story.titleUrdu;
+    document.getElementById('chapterPill').classList.add('visible');
   }
 
   function applyHubAtmosphere(){
@@ -1801,24 +2030,9 @@
   /* ---------------- chapter + paragraph observers ---------------- */
 
   function initObservers(){
-    const pill = document.getElementById('chapterPill');
-    const chapterObserver = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if(entry.isIntersecting){
-          const idx = parseInt(entry.target.dataset.themeIndex, 10);
-          setTheme(idx, false);
-          pill.classList.add('visible');
-          document.querySelectorAll('.reader-toc-btn').forEach(b => {
-            b.classList.toggle('active', parseInt(b.dataset.idx, 10) === idx);
-          });
-        }
-      });
-    }, { rootMargin: '-42% 0px -42% 0px', threshold: 0 });
-
-    document.querySelectorAll('.story').forEach(article => {
-      chapterObserver.observe(article);
-    });
-
+    // theme switching is driven directly by navigation now (goToPart /
+    // openReaderAtPart), since only the current part ever exists in the
+    // DOM — no more scroll-based chapter detection needed.
     const paraObserver = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if(entry.isIntersecting){
@@ -1834,7 +2048,7 @@
       document.querySelectorAll('.story-body p').forEach(p => p.classList.add('seen'));
     }
 
-    return [chapterObserver, paraObserver];
+    return [paraObserver];
   }
 
   /* ---------------- mouse-reactive card glow ---------------- */
@@ -1923,11 +2137,14 @@
     initCardGlow();
     initMagnetic(document.getElementById('heroInsta'), 6);
     initRipple(document.getElementById('heroInsta'));
+    initSwipe();
+    renderContinueCard();
+    history.replaceState({ view: 'hub' }, '');
 
-    document.getElementById('readerBack').addEventListener('click', backToPartList);
-    initRipple(document.getElementById('readerBack'));
+    document.getElementById('readerFab').addEventListener('click', () => backToPartList());
+    initRipple(document.getElementById('readerFab'));
 
-    document.getElementById('partListBack').addEventListener('click', backToStories);
+    document.getElementById('partListBack').addEventListener('click', () => backToStories());
     initRipple(document.getElementById('partListBack'));
 
     document.querySelectorAll('a[href="#stories"]').forEach(link => {
@@ -1947,7 +2164,13 @@
     window.addEventListener('scroll', () => {
       if(scrollTicking) return;
       scrollTicking = true;
-      requestAnimationFrame(() => { updateProgress(); scrollTicking = false; });
+      requestAnimationFrame(() => {
+        updateProgress();
+        if(document.getElementById('storyReader').classList.contains('active') && currentCollection){
+          saveProgress(currentCollection.id, currentPartIdx, window.scrollY);
+        }
+        scrollTicking = false;
+      });
     }, { passive: true });
     updateProgress();
 
