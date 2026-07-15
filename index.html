@@ -17,27 +17,27 @@
      tween accent colors whenever JS updates them
      on chapter change (no @property = instant jump)
      ============================================ */
-  @property --accent{ syntax:'<color>'; inherits:true; initial-value:#D8AC53; }
-  @property --accent-2{ syntax:'<color>'; inherits:true; initial-value:#F2D48A; }
+  @property --accent{ syntax:'<color>'; inherits:true; initial-value:#3FA678; }
+  @property --accent-2{ syntax:'<color>'; inherits:true; initial-value:#E3CD9C; }
 
   /* ============================================
      TOKENS
      ============================================ */
   :root{
-    --ink:      #0A0A0B;
-    --ink-2:    #131311;
-    --panel:    rgba(19, 18, 16, 0.55);
-    --panel-solid: rgba(16, 15, 14, 0.88);
-    --panel-border: rgba(180, 148, 98, 0.16);
+    --ink:      #070B09;
+    --ink-2:    #0E1712;
+    --panel:    rgba(14, 27, 20, 0.55);
+    --panel-solid: rgba(11, 21, 16, 0.88);
+    --panel-border: rgba(90, 168, 128, 0.18);
     --bone:     #EDE6D6;
-    --bone-dim: #B7AE9C;
-    --ember:    #6E5A3F;
-    --ember-dim:#3A2F20;
-    --ember-glow: #C9A167;
+    --bone-dim: #AFB8AA;
+    --ember:    #1F4A38;
+    --ember-dim:#12271D;
+    --ember-glow: #2F8F65;
     --gold:     #D9BC85;
-    --line:     #2B2823;
+    --line:     #1C2A22;
 
-    --accent:   #C4A06A;
+    --accent:   #3FA678;
     --accent-2: #E3CD9C;
 
     --f-urdu:  'Noto Nastaliq Urdu', serif;
@@ -127,7 +127,7 @@
   .loader{
     position:fixed; inset:0; z-index:999;
     display:flex; align-items:center; justify-content:center;
-    background:#0A0A0B;
+    background:#070B09;
     transition:opacity .8s ease, visibility .8s ease;
   }
   .loader.hidden{opacity:0; visibility:hidden; pointer-events:none;}
@@ -531,7 +531,8 @@
     -webkit-tap-highlight-color:transparent;
     transition:border-color .2s ease, transform .15s ease, background .2s ease;
   }
-  body.reading .reader-fab{display:flex;}
+  body.in-reader .reader-fab{display:flex;}
+  body.reading:not(.in-reader) .list-fab{display:flex;}
   .reader-fab:hover{border-color:var(--accent); transform:translateY(-2px);}
   .reader-fab:active{transform:scale(0.92);}
   @media (max-width:520px){
@@ -825,7 +826,7 @@
   </section>
 
   <div class="part-list-view" id="partListView">
-    <button class="reader-back" id="partListBack" type="button">&larr; all stories</button>
+    <button class="reader-fab list-fab" id="partListBack" type="button" aria-label="Back to all stories">&larr;</button>
     <p class="feed-heading" id="partListHeading">Raakh</p>
     <div class="story-list" id="partList"></div>
   </div>
@@ -866,7 +867,7 @@
    Each chapter automatically gets its own atmosphere (background,
    particles, accent color) from the THEMES array further down. With
    8 themes, any part beyond the 8th simply reuses an earlier mood
-   (Part 9 currently reuses Theme 1). If you want a unique mood for
+   (Part 9 has its own theme, added below). If you want a unique mood for
    a new chapter instead, add a new object to THEMES following the
    same shape as the others.
    ================================================================== */
@@ -1386,6 +1387,13 @@
       glowA:"rgba(216,172,83,0.18)", glowB:"rgba(232,118,58,0.06)", glowC:"rgba(216,172,83,0.05)",
       accent:"#D8AC53", accent2:"#F2D48A",
       particles:{ shape:"glow", behavior:"fall", count:18, colors:["#D8AC53","#F2D48A"], size:[1.5,3], speed:[2,4.5], opacity:[0.3,0.6], drift:[-5,5] }
+    },
+    { // 9 — stark white-grey clarity, the truth laid bare
+      name:"Clarity — Sach",
+      bg1:"#0c0d0e", bg2:"#131516", bg3:"#08090a",
+      glowA:"rgba(210,220,225,0.16)", glowB:"rgba(150,165,170,0.10)", glowC:"rgba(90,100,105,0.07)",
+      accent:"#D6DEE0", accent2:"#F4F8F9",
+      particles:{ shape:"glow", behavior:"rise", count:16, colors:["#F4F8F9","#D6DEE0","#9FB0B3"], size:[1,2.4], speed:[3,6], opacity:[0.25,0.55], drift:[8,22] }
     }
   ];
 
@@ -1398,10 +1406,10 @@
      object if you ever want to restyle the site's default look.
      ================================================================== */
   const HUB_THEME = {
-    bg1:"#0A0A0B", bg2:"#131311", bg3:"#070706",
-    glowA:"rgba(196,160,106,0.13)", glowB:"rgba(110,90,63,0.10)", glowC:"rgba(60,50,36,0.07)",
-    accent:"#C4A06A", accent2:"#E3CD9C",
-    particles:{ shape:"glow", behavior:"rise", count:12, colors:["#E3CD9C","#C4A06A","#8F7550"], size:[1.4,2.8], speed:[2,4], opacity:[0.18,0.4], drift:[6,16] }
+    bg1:"#070B09", bg2:"#0E1712", bg3:"#050807",
+    glowA:"rgba(63,166,120,0.16)", glowB:"rgba(196,160,106,0.10)", glowC:"rgba(47,143,101,0.08)",
+    accent:"#3FA678", accent2:"#E3CD9C",
+    particles:{ shape:"glow", behavior:"rise", count:12, colors:["#E3CD9C","#3FA678","#7FC9A0"], size:[1.4,2.8], speed:[2,4], opacity:[0.18,0.4], drift:[6,16] }
   };
 
   const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1789,6 +1797,7 @@
     document.getElementById('partListView').classList.remove('active');
     document.getElementById('stories').classList.add('hidden');
     document.body.classList.add('reading');
+    document.body.classList.add('in-reader');
     const reader = document.getElementById('storyReader');
     reader.classList.add('active');
 
@@ -1812,6 +1821,7 @@
     readerObservers.forEach(o => o.disconnect());
     readerObservers = [];
 
+    document.body.classList.remove('in-reader');
     document.getElementById('storyReader').classList.remove('active');
     document.getElementById('partListView').classList.add('active');
     document.getElementById('partListView').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1826,6 +1836,7 @@
     readerObservers = [];
 
     document.body.classList.remove('reading');
+    document.body.classList.remove('in-reader');
     document.getElementById('storyReader').classList.remove('active');
     document.getElementById('partListView').classList.remove('active');
     document.getElementById('stories').classList.remove('hidden');
